@@ -23,9 +23,36 @@ flatpak install aiextra com.openai.ChatGPT com.anthropic.Claude
 Then launch with `flatpak run com.openai.ChatGPT` / `flatpak run
 com.anthropic.Claude`, or from your application launcher.
 
-This repo is **unsigned** (no GPG key) — integrity relies on HTTPS transport
-plus the per-source sha256 checksum baked into each manifest, the same as
-the sha256 published in OpenAI's/Anthropic's own apt repo indexes.
+Every OSTree commit and the repo summary are GPG-signed by CI as part of
+`build.yml`; `aiextra.flatpakrepo` embeds the public key, so
+`flatpak remote-add` picks up verification automatically — you don't need
+to do anything extra. Public key fingerprint:
+
+```
+01C7 6F3F 9B96 23D7 1ECA F346 F735 39F5 C33B 8E12
+```
+
+The armored public key is also committed at
+[`keys/aiextra-flatpak.asc`](keys/aiextra-flatpak.asc) if you'd rather
+import it explicitly:
+
+```sh
+flatpak remote-add --if-not-exists --gpg-import=keys/aiextra-flatpak.asc \
+  aiextra https://first-storm.github.io/aiextra-flatpak/aiextra.flatpakrepo
+```
+
+If you added the remote **before** signing was turned on, your local remote
+config still has `gpg-verify=false` cached (re-fetching the `.flatpakrepo`
+file doesn't change an already-added remote). Either remove and re-add the
+remote, or run:
+
+```sh
+flatpak remote-modify --gpg-import=keys/aiextra-flatpak.asc aiextra
+```
+
+The signing key is RSA 4096, generated for CI use only (no passphrase — the
+private key exists solely as a GitHub Actions secret, decrypted into an
+ephemeral `GNUPGHOME` for each build run and never written to the repo).
 
 ## Updating
 
