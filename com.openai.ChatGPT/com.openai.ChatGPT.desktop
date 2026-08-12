@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=ChatGPT
+Comment=ChatGPT by OpenAI
+GenericName=AI assistant
+Exec=com.openai.ChatGPT %U
+Icon=com.openai.ChatGPT
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=com.openai.ChatGPT
+Categories=Utility;Development;
+MimeType=x-scheme-handler/codex;text/csv;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.openxmlformats-officedocument.presentationml.presentation;text/tab-separated-values;application/vnd.ms-excel;application/vnd.ms-excel.sheet.macroEnabled.12;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;

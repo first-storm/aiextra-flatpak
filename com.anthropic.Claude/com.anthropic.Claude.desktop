@@ -1,0 +1,23 @@
+[Desktop Entry]
+Name=Claude
+Comment=Desktop application for Claude.ai
+GenericName=AI Assistant
+Keywords=AI;Chat;Assistant;Claude;Code;LLM;
+Exec=com.anthropic.Claude %U
+Icon=com.anthropic.Claude
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=com.anthropic.Claude
+SingleMainWindow=true
+Categories=Utility;Development;
+MimeType=x-scheme-handler/claude;
+Actions=NewChat;NewCode;
+
+[Desktop Action NewChat]
+Name=New chat
+Exec=com.anthropic.Claude claude://claude.ai/new
+
+[Desktop Action NewCode]
+Name=New Claude Code session
+Exec=com.anthropic.Claude claude://code/new

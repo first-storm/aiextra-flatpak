@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.openai.ChatGPT</id>
+  <name>ChatGPT</name>
+  <summary>ChatGPT by OpenAI</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="com.openai">
+    <name>OpenAI</name>
+  </developer>
+  <description>
+    <p>
+      ChatGPT is an AI assistant from OpenAI. This Flatpak wraps the official
+      Linux desktop build; the app itself is downloaded directly from
+      OpenAI's own distribution servers at install time and is not
+      redistributed by this packaging.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.openai.ChatGPT.desktop</launchable>
+  <url type="homepage">https://developers.openai.com/codex/app</url>
+  <url type="bugtracker">https://help.openai.com</url>
+  <categories>
+    <category>Utility</category>
+    <category>Development</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="26.803.81509" date="2026-08-11"/>
+  </releases>
+</component>

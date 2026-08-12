@@ -1,0 +1,66 @@
+name: Build and publish Flatpak repo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'com.openai.ChatGPT/**'
+      - 'com.anthropic.Claude/**'
+      - 'icons/**'
+      - 'aiextra.flatpakrepo'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install flatpak and flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+
+      - name: Add Flathub remote
+        run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Install runtime, SDK and Electron base app
+        run: |
+          sudo flatpak install -y flathub \
+            org.freedesktop.Platform//25.08 \
+            org.freedesktop.Sdk//25.08 \
+            org.electronjs.Electron2.BaseApp//25.08
+
+      # extra-data sources are not fetched by flatpak-builder (only recorded
+      # as {url, sha256, size} metadata for the end user's `flatpak install`
+      # to resolve later), so these builds never download the actual
+      # multi-hundred-MB ChatGPT/Claude binaries.
+      - name: Build ChatGPT
+        run: |
+          flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
+            build-chatgpt com.openai.ChatGPT/com.openai.ChatGPT.yml
+
+      - name: Build Claude
+        run: |
+          flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
+            build-claude com.anthropic.Claude/com.anthropic.Claude.yml
+
+      - name: Update repo metadata
+        run: flatpak build-update-repo repo
+
+      - name: Assemble Pages site
+        run: |
+          cp aiextra.flatpakrepo README.md .nojekyll repo/
+          cp -r icons repo/icons
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./repo
+          publish_branch: gh-pages

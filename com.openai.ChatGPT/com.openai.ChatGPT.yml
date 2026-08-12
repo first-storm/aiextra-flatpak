@@ -1,0 +1,111 @@
+app-id: com.openai.ChatGPT
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+command: com.openai.ChatGPT
+separate-locales: false
+tags:
+  - proprietary
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=all
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.kde.kwalletd6
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+
+modules:
+  - name: chatgpt
+    buildsystem: simple
+    build-options:
+      no-debuginfo: true
+      strip: false
+    build-commands:
+      - install -Dm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
+      - install -Dm755 chatgpt.sh ${FLATPAK_DEST}/bin/${FLATPAK_ID}
+      - install -Dm644 com.openai.ChatGPT.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 com.openai.ChatGPT.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - |
+        set -e
+        for size in 16 32 48 128 256 512; do
+          install -Dm644 icon-${size}.png \
+            ${FLATPAK_DEST}/share/icons/hicolor/${size}x${size}/apps/${FLATPAK_ID}.png
+        done
+    sources:
+      # amd64 build of the ChatGPT desktop app, fetched by the end user's
+      # `flatpak install` (not by flatpak-builder) straight from OpenAI's own
+      # apt repo and verified against the sha256 below. See
+      # https://persistent.oaistatic.com/codex-app-prod/linux/deb (Suites:
+      # stable, Components: main) — the same repo `chatgpt.sources` points at.
+      - type: extra-data
+        filename: chatgpt.deb
+        only-arches: [x86_64]
+        url: https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.803.81509_amd64.deb
+        sha256: a9bf91a368f9f7c4eea38082a9fb8fb46b8d005b719a6d7715d2e5a1982c38eb
+        size: 349937362
+        x-checker-data:
+          type: debian-repo
+          package-name: chatgpt
+          root: https://persistent.oaistatic.com/codex-app-prod/linux/deb
+          dist: stable
+          component: main
+          is-main-source: true
+      - type: extra-data
+        filename: chatgpt.deb
+        only-arches: [aarch64]
+        url: https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.803.81509_arm64.deb
+        sha256: f38fcc194eca9ab0327dc10c92340681eae77c5d75164df700384ce2adaccbc1
+        size: 321468486
+        x-checker-data:
+          type: debian-repo
+          package-name: chatgpt
+          root: https://persistent.oaistatic.com/codex-app-prod/linux/deb
+          dist: stable
+          component: main
+      - type: file
+        path: chatgpt.sh
+      - type: file
+        path: com.openai.ChatGPT.desktop
+      - type: file
+        path: com.openai.ChatGPT.metainfo.xml
+      - type: file
+        path: ../icons/chatgpt/com.openai.ChatGPT-16.png
+        dest-filename: icon-16.png
+      - type: file
+        path: ../icons/chatgpt/com.openai.ChatGPT-32.png
+        dest-filename: icon-32.png
+      - type: file
+        path: ../icons/chatgpt/com.openai.ChatGPT-48.png
+        dest-filename: icon-48.png
+      - type: file
+        path: ../icons/chatgpt/com.openai.ChatGPT-128.png
+        dest-filename: icon-128.png
+      - type: file
+        path: ../icons/chatgpt/com.openai.ChatGPT-256.png
+        dest-filename: icon-256.png
+      - type: file
+        path: ../icons/chatgpt/com.openai.ChatGPT-512.png
+        dest-filename: icon-512.png
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          # The .deb is an ar archive containing a data.tar.{xz,zst,...}; the
+          # actual app lives at usr/lib/chatgpt/ inside it. bsdtar can read
+          # the ar container directly, so pipe its data member straight into
+          # a second bsdtar that unpacks just that subtree, flattened into
+          # the current directory (/app/extra).
+          - bsdtar -Oxf chatgpt.deb 'data.tar*' | bsdtar -xf - --strip-components=4 ./usr/lib/chatgpt
+          - rm chatgpt.deb
+          # Make Electron report our Flatpak app ID as its Wayland app_id /
+          # X11 WM_CLASS so window/taskbar/icon association works.
+          - patch-electron-desktop-filename --desktop-filename com.openai.ChatGPT --skip-integrity-check resources/app.asar
