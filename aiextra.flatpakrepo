@@ -1,7 +1,7 @@
 [Flatpak Repo]
 Title=AI Extra
-Url=https://LMFuture.github.io/aiextra-flatpak/
+Url=https://first-storm.github.io/aiextra-flatpak/
 Comment=ChatGPT Desktop and Claude Desktop, repackaged as Flatpaks
 Description=Unofficial Flatpak repo for ChatGPT Desktop (OpenAI) and Claude Desktop (Anthropic). The actual proprietary app binaries are downloaded directly from OpenAI's and Anthropic's own servers at install time; this repo only ships the Flatpak wrapper and always points at the vendors' latest published build.
-Homepage=https://github.com/LMFuture/aiextra-flatpak
-Icon=https://LMFuture.github.io/aiextra-flatpak/icons/claude/com.anthropic.Claude-128.png
+Homepage=https://github.com/first-storm/aiextra-flatpak
+Icon=https://first-storm.github.io/aiextra-flatpak/icons/claude/com.anthropic.Claude-128.png

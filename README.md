@@ -16,7 +16,7 @@ script) around that download.
 ## Install
 
 ```sh
-flatpak remote-add --if-not-exists aiextra https://LMFuture.github.io/aiextra-flatpak/aiextra.flatpakrepo
+flatpak remote-add --if-not-exists aiextra https://first-storm.github.io/aiextra-flatpak/aiextra.flatpakrepo
 flatpak install aiextra com.openai.ChatGPT com.anthropic.Claude
 ```
 
