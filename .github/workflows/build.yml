@@ -26,6 +26,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y flatpak flatpak-builder
 
+      # Ubuntu 24.04 runners restrict unprivileged user namespaces by
+      # default (AppArmor), which breaks bwrap (and therefore
+      # flatpak-builder's sandboxed build-commands) with errors like
+      # "Creating new namespace failed: Operation not permitted". This is
+      # the standard workaround used by flatpak's own CI.
+      - name: Allow unprivileged user namespaces (bwrap needs this)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Add Flathub remote
         run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
