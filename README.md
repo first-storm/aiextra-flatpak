@@ -51,6 +51,17 @@ release also fetches the new app build.
   install time by each user's own Flatpak client, this build step never
   downloads the multi-hundred-MB app binaries itself — it stays fast and the
   published repo stays small.
+- A push that only touches one app's manifest still rebuilds both (the
+  `paths:` filter only decides whether the workflow runs at all, not which
+  steps run), but the two builds are independent: each uses
+  `continue-on-error`, and the job checks out the currently-published
+  `gh-pages` OSTree repo as its starting point before building, so
+  `flatpak-builder` only adds/updates the ref for the app(s) that built
+  successfully. If, say, Claude's manifest breaks, ChatGPT's update still
+  publishes normally and Claude's ref stays pinned to its last successful
+  build — a broken manifest for one app never blocks the other's release.
+  The workflow run is still marked failed (and will show up as a red run /
+  trigger notifications) so the break doesn't go unnoticed.
 
 ## Known limitations
 
