@@ -6,7 +6,6 @@ on:
     paths:
       - 'com.openai.ChatGPT/**'
       - 'com.anthropic.Claude/**'
-      - 'icons/**'
       - 'aiextra.flatpakrepo'
       - '.github/workflows/build.yml'
   workflow_dispatch:
@@ -110,7 +109,6 @@ jobs:
         if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success'
         run: |
           cp aiextra.flatpakrepo README.md .nojekyll repo/
-          cp -r icons repo/icons
 
       - name: Publish to GitHub Pages
         if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success'

@@ -79,19 +79,19 @@ modules:
       - type: file
         path: com.anthropic.Claude.metainfo.xml
       - type: file
-        path: ../icons/claude/com.anthropic.Claude-16.png
+        path: icons/com.anthropic.Claude-16.png
         dest-filename: icon-16.png
       - type: file
-        path: ../icons/claude/com.anthropic.Claude-32.png
+        path: icons/com.anthropic.Claude-32.png
         dest-filename: icon-32.png
       - type: file
-        path: ../icons/claude/com.anthropic.Claude-48.png
+        path: icons/com.anthropic.Claude-48.png
         dest-filename: icon-48.png
       - type: file
-        path: ../icons/claude/com.anthropic.Claude-128.png
+        path: icons/com.anthropic.Claude-128.png
         dest-filename: icon-128.png
       - type: file
-        path: ../icons/claude/com.anthropic.Claude-256.png
+        path: icons/com.anthropic.Claude-256.png
         dest-filename: icon-256.png
       - type: script
         dest-filename: apply_extra
