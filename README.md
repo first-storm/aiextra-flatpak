@@ -103,9 +103,11 @@ release also fetches the new app build.
 
 ## Repo layout
 
-- `com.openai.ChatGPT/` — ChatGPT Desktop manifest, desktop file, metainfo, launcher.
-- `com.anthropic.Claude/` — Claude Desktop manifest, desktop file, metainfo, launcher.
-- `icons/` — hicolor-theme icon sets for both apps, extracted from the
-  upstream `.deb` packages.
+- `com.openai.ChatGPT/` — ChatGPT Desktop manifest, desktop file, metainfo,
+  launcher, and `icons/` (hicolor-theme icon set extracted from the
+  upstream `.deb`).
+- `com.anthropic.Claude/` — Claude Desktop manifest, desktop file, metainfo,
+  launcher, and `icons/` (hicolor-theme icon set extracted from the
+  upstream `.deb`).
 - `aiextra.flatpakrepo` — the remote definition users add with `flatpak
   remote-add`.
