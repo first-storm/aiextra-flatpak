@@ -29,7 +29,7 @@ Every OSTree commit and the repo summary are GPG-signed by CI as part of
 to do anything extra. Public key fingerprint:
 
 ```
-01C7 6F3F 9B96 23D7 1ECA F346 F735 39F5 C33B 8E12
+01C7 6F3F 9B96 23D7 5ECA F346 F735 39F5 C33B 8E12
 ```
 
 The armored public key is also committed at
