@@ -17,8 +17,8 @@ flatpak remote-add --if-not-exists aiextra https://first-storm.github.io/aiextra
 flatpak install aiextra com.openai.ChatGPT com.anthropic.Claude
 ```
 
-Published builds are x86_64 only. The manifests do carry aarch64 sources if you
-want to build one yourself.
+Published builds cover both x86_64 and aarch64; `flatpak install` picks the
+ref matching your machine automatically.
 
 ## Signing
 

@@ -19,7 +19,21 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # One arch at a time: each leg checks out the current gh-pages state,
+      # adds its ref to the shared OSTree repo, and publishes before the next
+      # leg starts. Running both legs in parallel would race two publishes
+      # against the same branch, and the second to land would overwrite the
+      # first's freshly-added ref with a stale gh-pages checkout.
+      max-parallel: 1
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-latest
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +85,10 @@ jobs:
       - name: Add Flathub remote
         run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+      # Each matrix leg runs on a runner whose CPU already matches
+      # matrix.arch, so this installs (and flatpak-builder later builds) the
+      # runtime/SDK/BaseApp for that arch natively, with no --arch flag or
+      # cross/QEMU setup needed.
       - name: Install runtime, SDK and Electron base app
         run: |
           sudo flatpak install -y flathub \
@@ -125,5 +143,5 @@ jobs:
       - name: Fail the workflow if any app failed to build
         if: steps.build-chatgpt.outcome == 'failure' || steps.build-claude.outcome == 'failure'
         run: |
-          echo "::error::ChatGPT build: ${{ steps.build-chatgpt.outcome }}, Claude build: ${{ steps.build-claude.outcome }}"
+          echo "::error::[${{ matrix.arch }}] ChatGPT build: ${{ steps.build-chatgpt.outcome }}, Claude build: ${{ steps.build-claude.outcome }}"
           exit 1

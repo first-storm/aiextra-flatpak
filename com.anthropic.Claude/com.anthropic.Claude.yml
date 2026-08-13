@@ -38,8 +38,10 @@ modules:
       - install -Dm644 com.anthropic.Claude.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
       - |
         set -e
-        for size in 16 32 48 128 256; do
-          install -Dm644 icon-${size}.png \
+        for f in icons/*.png; do
+          size=${f##*-}
+          size=${size%.png}
+          install -Dm644 "$f" \
             ${FLATPAK_DEST}/share/icons/hicolor/${size}x${size}/apps/${FLATPAK_ID}.png
         done
     sources:
@@ -79,21 +81,9 @@ modules:
         path: com.anthropic.Claude.desktop
       - type: file
         path: com.anthropic.Claude.metainfo.xml
-      - type: file
-        path: icons/com.anthropic.Claude-16.png
-        dest-filename: icon-16.png
-      - type: file
-        path: icons/com.anthropic.Claude-32.png
-        dest-filename: icon-32.png
-      - type: file
-        path: icons/com.anthropic.Claude-48.png
-        dest-filename: icon-48.png
-      - type: file
-        path: icons/com.anthropic.Claude-128.png
-        dest-filename: icon-128.png
-      - type: file
-        path: icons/com.anthropic.Claude-256.png
-        dest-filename: icon-256.png
+      - type: dir
+        path: icons
+        dest: icons
       - type: script
         dest-filename: apply_extra
         commands:
