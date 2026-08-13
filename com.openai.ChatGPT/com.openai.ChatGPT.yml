@@ -21,6 +21,7 @@ finish-args:
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.kwalletd5
   - --talk-name=org.kde.kwalletd6
+  - --persist=.codex
   - --filesystem=xdg-download
   - --filesystem=xdg-documents
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
