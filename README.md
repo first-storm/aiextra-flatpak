@@ -92,11 +92,6 @@ release also fetches the new app build.
 
 ## Known limitations
 
-- Claude Desktop's Linux beta does not yet support the Cowork /
-  computer-use sandbox (per
-  [Anthropic's own docs](https://code.claude.com/docs/en/desktop-linux)), so
-  no `--device=kvm` or similar permission is requested for it here. If that
-  feature ships later it may need a manifest update.
 - Both apps run under [zypak](https://github.com/refi64/zypak) (via
   `org.electronjs.Electron2.BaseApp`) for Chromium sandbox compatibility
   inside the Flatpak sandbox.
