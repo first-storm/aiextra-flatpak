@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   flatpak-external-data-checker:
@@ -19,9 +20,11 @@ jobs:
       # flatpak-external-data-checker resolves each manifest's
       # x-checker-data (type: debian-repo) against OpenAI's / Anthropic's
       # apt repo indexes, and rewrites the extra-data url/sha256/size in
-      # place when a newer version is published. --never-fork commits
-      # straight to main instead of opening a PR, which in turn triggers
-      # build.yml to rebuild and republish to GitHub Pages.
+      # place when a newer version is published. --never-fork pushes the
+      # update branch to this repo instead of forking, but it still opens
+      # a PR against main via the GitHub API, so pull-requests: write is
+      # required. Merging that PR triggers build.yml to rebuild and
+      # republish to GitHub Pages.
       - name: Check ChatGPT manifest
         uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
         env:
@@ -43,3 +46,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --update --never-fork com.anthropic.Claude/com.anthropic.Claude.yml
+
+      # The checker doesn't merge PRs on its own here: it only auto-merges
+      # when the repo has a flathub.json with automerge-flathubbot-prs, or
+      # for BROKEN-source fixes, and it gates that on CI status which this
+      # repo never posts. Merge every update-* PR directly so build.yml
+      # (push-to-main triggered) actually republishes the update. if:
+      # always() so a failure in one Check step doesn't skip merging a PR
+      # the other step already opened.
+      - name: Merge update PRs
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list --repo "$GITHUB_REPOSITORY" --base main --state open \
+            --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("update-")) | .number' |
+          while read -r pr; do
+            gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --rebase --delete-branch
+          done
