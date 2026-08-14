@@ -39,12 +39,12 @@ flatpak remote-add aiextra https://first-storm.github.io/aiextra-flatpak/aiextra
 
 ## Updates
 
-A job checks all three apps' upstream sources every 6 hours with
+A job checks all application manifests' upstream sources every 6 hours with
 [flatpak-external-data-checker](https://github.com/flathub/flatpak-external-data-checker).
 New upstream builds and wrapper changes both reach you through
 `flatpak update`.
 
-All three apps run under [zypak](https://github.com/refi64/zypak), from
+All packaged apps run under [zypak](https://github.com/refi64/zypak), from
 `org.electronjs.Electron2.BaseApp`, so Chromium's sandbox works inside the
 Flatpak sandbox. Claude Desktop for Linux is still a beta. The files under
-`.github/workflows/` are commented if you want the rest.
+`.github/workflows/` and `tools/` are commented if you want the rest.
