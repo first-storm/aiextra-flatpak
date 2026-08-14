@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-This repository packages unofficial Flatpak wrappers for the proprietary Linux releases of ChatGPT (`com.openai.ChatGPT`), Claude (`com.anthropic.Claude`), and ZCode (`ai.z.ZCode`). It does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
+This repository packages unofficial Flatpak wrappers for the proprietary Linux releases of desktop applications (e.g. ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, and ZCode `ai.z.ZCode`). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
 
 Run commands below from the repository root.
 
 ## Build and validation commands
 
-Install the build dependencies and the runtime used by every manifest:
+Install the build dependencies and the runtime used by manifests:
 
 ```sh
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
@@ -20,45 +20,46 @@ flatpak install -y flathub \
   org.electronjs.Electron2.BaseApp//25.08
 ```
 
-CI builds each application separately into the shared Flatpak repository. These exact commands require `GPG_KEY_ID` and `GNUPGHOME` to identify an imported signing key:
+Discover all application manifests in the repository:
 
 ```sh
-flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
-  --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
-  build-chatgpt com.openai.ChatGPT/com.openai.ChatGPT.yml
+tools/discover-manifests.sh
+```
 
-flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
-  --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
-  build-claude com.anthropic.Claude/com.anthropic.Claude.yml
+Build all discovered applications into a shared repository (requires `GPG_KEY_ID` and `GNUPGHOME` for signing in CI, or omit them for unsigned local builds):
 
-flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
-  --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
-  build-zcode ai.z.ZCode/ai.z.ZCode.yml
+```sh
+tools/build-apps.sh
 
 flatpak build-update-repo \
   --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
 ```
 
-For a local manifest-only build where publication/signing is not needed, omit `--repo`, `--gpg-sign`, and `--gpg-homedir` from the corresponding `flatpak-builder` command.
+For targeted validation of a single application without publishing/signing:
+
+```sh
+flatpak-builder --force-clean --disable-rofiles-fuse build-com.openai.ChatGPT manifests/com.openai.ChatGPT/com.openai.ChatGPT.yml
+```
 
 There is no test suite, linter, formatter, or static-check configuration. Building one app is the targeted validation equivalent; there is no single-test command. Generated state is ignored under `.flatpak-builder/`, `build-*`, `repo/`, and `*.flatpak`.
 
-The automated upstream update command, normally run by `.github/workflows/update-check.yml`, is:
+The automated upstream update check across all discovered manifests is run by:
 
 ```sh
-flatpak-external-data-checker --update --commit-to-current-branch \
-  com.openai.ChatGPT/com.openai.ChatGPT.yml
-flatpak-external-data-checker --update --commit-to-current-branch \
-  com.anthropic.Claude/com.anthropic.Claude.yml
-flatpak-external-data-checker --update --commit-to-current-branch \
-  ai.z.ZCode/ai.z.ZCode.yml
+tools/check-updates.sh
+```
+
+Or for a single manifest:
+
+```sh
+flatpak-external-data-checker --update --commit-to-current-branch manifests/com.openai.ChatGPT/com.openai.ChatGPT.yml
 ```
 
 Review checker-generated manifest changes together with the prepended release entries in the matching metainfo file. The GitHub workflow commits directly to `main`, pushes, then explicitly dispatches `build.yml` because a `GITHUB_TOKEN` push does not trigger another workflow.
 
 ## Package architecture
 
-Each app-ID directory is one package unit containing a manifest, shell launcher, desktop entry, AppStream metainfo, and size-specific icons. The app ID is coupled across these assets: manifest and metadata filenames, `command`, installed launcher, desktop `Exec`/`Icon`/`StartupWMClass`, metainfo ID and launchable desktop ID, icon filename prefix, and Electron patch target must remain aligned.
+Each directory under `manifests/<app-id>/` is one package unit containing a manifest, shell launcher, desktop entry, AppStream metainfo, and size-specific icons. The app ID is coupled across these assets: manifest and metadata filenames, `command`, installed launcher, desktop `Exec`/`Icon`/`StartupWMClass`, metainfo ID and launchable desktop ID, icon filename prefix, and Electron patch target must remain aligned.
 
 Each manifest contains two `extra-data` sources—one for `x86_64`, one for `aarch64`—with vendor URL, size, SHA256, and `x-checker-data`. `flatpak-builder` records these sources but intentionally does not download the large proprietary payload during CI.
 
@@ -74,9 +75,23 @@ Vendors do not agree on where the payload lives inside the `.deb`, so the `--str
 
 The installed shell launcher runs the extracted vendor executable through `zypak-wrapper` and sets `TMPDIR=$XDG_CACHE_HOME`. ChatGPT also deliberately persists `.codex` through its manifest permissions, and ZCode `.zcode`.
 
-`ai.z.ZCode`'s `finish-args` are derived from what its `app.asar` actually uses rather than copied from the other two apps, and the manifest carries per-line comments recording that evidence—including for the two permissions deliberately withheld (`org.kde.StatusNotifierWatcher`, because its tray code is Windows-only; `org.freedesktop.Flatpak`, because the app has no `flatpak-spawn` support). Do not widen them without re-checking the payload.
+`ai.z.ZCode`'s `finish-args` are derived from what its `app.asar` actually uses rather than copied from other apps, and the manifest carries per-line comments recording that evidence—including for permissions deliberately withheld (`org.kde.StatusNotifierWatcher`, because its tray code is Windows-only; `org.freedesktop.Flatpak`, because the app has no `flatpak-spawn` support). Do not widen them without re-checking the payload.
 
 Icon installation derives the size from filenames shaped as `<app-id>-<size>.png`; preserve that naming scheme when changing icons.
+
+## Adding a new application
+
+Adding a new application **does not require editing any GitHub Actions workflows** (`.github/workflows/`). To add an app:
+
+1. Create a package directory under `manifests/` named with the reverse-DNS Flatpak app ID: `manifests/<app-id>/`.
+2. Create the Flatpak manifest `manifests/<app-id>/<app-id>.yml` (or `.yaml`) specifying matching `app-id: <app-id>` and two architecture-specific `extra-data` sources with `x-checker-data`.
+3. Add the desktop entry `manifests/<app-id>/<app-id>.desktop`, AppStream metadata `manifests/<app-id>/<app-id>.metainfo.xml`, shell launcher `manifests/<app-id>/<name>.sh`, and icons under `manifests/<app-id>/icons/<app-id>-<size>.png`.
+4. Validate discovery and manifest build locally:
+   ```sh
+   tools/discover-manifests.sh
+   flatpak-builder --force-clean --disable-rofiles-fuse build-<app-id> manifests/<app-id>/<app-id>.yml
+   ```
+5. Update `README.md` install command and `aiextra.flatpakrepo` description if the app is ready for users.
 
 ## CI and publication flow
 
@@ -86,11 +101,12 @@ Within each architecture job, CI:
 
 1. Seeds `repo/` from the existing `gh-pages` branch.
 2. Imports the private GPG key and installs the runtime, SDK, and Electron BaseApp.
-3. Builds ChatGPT, Claude, and ZCode independently into `repo/`.
-4. Signs updated repository metadata and publishes `repo/` back to `gh-pages`.
+3. Dynamically discovers and builds all application manifests in the repository via `tools/build-apps.sh`.
+4. Signs updated repository metadata and publishes `repo/` back to `gh-pages` if at least one build succeeded.
+5. Fails the workflow job if any application build failed, surfacing the list of failed app IDs in `::error::`.
 
-The app build steps intentionally use `continue-on-error` so successful apps can still be published if another fails. A final step then fails the job if any build failed. Preserve both halves of this partial-success behavior. Adding an app means extending five places in `build.yml`: the `paths` filter, a new build step with a unique `id`, the shared `if:` condition on the three publish steps, and both the `if:` and the `::error::` message of the final failure gate.
+The dynamic app build step uses `continue-on-error` and isolates individual build errors so that successful app updates can still be published while preserving previous versions of failed apps.
 
 `aiextra.flatpakrepo` embeds the public key corresponding to CI's `GPG_PRIVATE_KEY`; keep them synchronized during key rotation.
 
-The build workflow's path filter covers the app directories, `aiextra.flatpakrepo`, and `build.yml`. README-only or update-workflow-only changes do not trigger a build automatically.
+The build workflow's path filter ignores documentation and update-check workflow changes (`paths-ignore`), triggering on any push to `main` that touches application manifests, assets, tools, or repo metadata.

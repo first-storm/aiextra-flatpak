@@ -28,29 +28,15 @@ jobs:
 
       # flatpak-external-data-checker resolves each manifest's x-checker-data
       # and rewrites the extra-data url/sha256/size in place when a newer
-      # version is published: type: debian-repo against OpenAI's / Anthropic's
-      # apt repo indexes, and type: json against Z.AI's releases API, which is
-      # all they publish (no apt repo). --commit-to-current-branch commits
-      # straight onto the checked out main rather than cutting an update-*
-      # branch and opening a PR, so every app's update accumulates as ordinary
-      # commits that the push below ships together. (A PR round-trip buys
-      # nothing here: no review, no CI on PRs, and each later checker would
-      # otherwise branch off the previous one's branch and open its PR against
-      # the wrong base.)
-      - name: Check ChatGPT manifest
-        uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
-        with:
-          args: --update --commit-to-current-branch com.openai.ChatGPT/com.openai.ChatGPT.yml
-
-      - name: Check Claude manifest
-        uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
-        with:
-          args: --update --commit-to-current-branch com.anthropic.Claude/com.anthropic.Claude.yml
-
-      - name: Check ZCode manifest
-        uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
-        with:
-          args: --update --commit-to-current-branch ai.z.ZCode/ai.z.ZCode.yml
+      # version is published.
+      #
+      # Dynamically discovers all application manifests and checks each of them.
+      # --commit-to-current-branch commits straight onto the checked out main
+      # rather than cutting an update-* branch and opening a PR.
+      - name: Run flatpak-external-data-checker on all manifests
+        id: checker
+        continue-on-error: true
+        run: bash tools/check-updates.sh
 
       # if: always() so an update an earlier checker already committed still
       # ships when a later one fails; the failed step keeps the run red.
@@ -67,3 +53,11 @@ jobs:
           # Pushes authenticated with GITHUB_TOKEN don't trigger other
           # workflows, so build.yml has to be dispatched explicitly.
           gh workflow run build.yml --ref main
+
+      # Ensure the workflow run is marked red if any application checker failed,
+      # after any successful updates have already been pushed.
+      - name: Fail workflow if any checker failed
+        if: always() && (steps.checker.outputs.failure_count != '0' || steps.checker.outcome == 'failure')
+        run: |
+          echo "::error::External data checker failed for: ${{ steps.checker.outputs.failed_apps }}"
+          exit 1

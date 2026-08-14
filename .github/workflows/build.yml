@@ -3,12 +3,10 @@ name: Build and publish Flatpak repo
 on:
   push:
     branches: [main]
-    paths:
-      - 'com.openai.ChatGPT/**'
-      - 'com.anthropic.Claude/**'
-      - 'ai.z.ZCode/**'
-      - 'aiextra.flatpakrepo'
-      - '.github/workflows/build.yml'
+    paths-ignore:
+      - 'README.md'
+      - 'CLAUDE.md'
+      - '.github/workflows/update-check.yml'
   workflow_dispatch:
 
 concurrency:
@@ -40,10 +38,10 @@ jobs:
 
       # Seed `repo/` with whatever is already published. flatpak-builder
       # then updates it incrementally (it's a normal OSTree repo, refs are
-      # independent), so if e.g. only Claude's manifest failed to build, the
-      # other apps' new refs still get published and Claude's ref/objects
-      # from the last successful build are carried over untouched instead of
-      # being wiped out by the publish step.
+      # independent), so if e.g. one manifest failed to build, the
+      # other apps' new refs still get published and the failed app's
+      # ref/objects from the last successful build are carried over untouched
+      # instead of being wiped out by the publish step.
       - name: Check out existing gh-pages as a starting point
         uses: actions/checkout@v4
         continue-on-error: true # first-ever run: gh-pages doesn't exist yet
@@ -102,55 +100,37 @@ jobs:
       # to resolve later), so these builds never download the actual
       # multi-hundred-MB vendor binaries.
       #
-      # Each build is independent (continue-on-error): one app failing to
-      # build must not block the other apps' updates from being published.
-      - name: Build ChatGPT
-        id: build-chatgpt
+      # Dynamically discovers and builds all Flatpak manifests.
+      # Each build is independent: one app failing to build must not block
+      # other apps' updates from being published.
+      - name: Build all Flatpak applications
+        id: build_apps
         continue-on-error: true
-        run: |
-          flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
-            --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
-            build-chatgpt com.openai.ChatGPT/com.openai.ChatGPT.yml
-
-      - name: Build Claude
-        id: build-claude
-        continue-on-error: true
-        run: |
-          flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
-            --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
-            build-claude com.anthropic.Claude/com.anthropic.Claude.yml
-
-      - name: Build ZCode
-        id: build-zcode
-        continue-on-error: true
-        run: |
-          flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
-            --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
-            build-zcode ai.z.ZCode/ai.z.ZCode.yml
+        run: bash tools/build-apps.sh
 
       - name: Update repo metadata
-        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success' || steps.build-zcode.outcome == 'success'
+        if: always() && steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
         run: flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
 
       - name: Assemble Pages site
-        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success' || steps.build-zcode.outcome == 'success'
+        if: always() && steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
         run: |
           cp aiextra.flatpakrepo README.md .nojekyll repo/
 
       - name: Publish to GitHub Pages
-        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success' || steps.build-zcode.outcome == 'success'
+        if: always() && steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./repo
           publish_branch: gh-pages
 
-      # continue-on-error hides individual step failures from the job
+      # continue-on-error hides individual build failures from the step
       # result, so surface it explicitly here: the workflow run should
       # still show red (and notify) if any app failed, even though the
       # other apps' updates were published successfully.
       - name: Fail the workflow if any app failed to build
-        if: steps.build-chatgpt.outcome == 'failure' || steps.build-claude.outcome == 'failure' || steps.build-zcode.outcome == 'failure'
+        if: always() && (steps.build_apps.outputs.failure_count != '0' || steps.build_apps.outcome == 'failure')
         run: |
-          echo "::error::[${{ matrix.arch }}] ChatGPT build: ${{ steps.build-chatgpt.outcome }}, Claude build: ${{ steps.build-claude.outcome }}, ZCode build: ${{ steps.build-zcode.outcome }}"
+          echo "::error::[${{ matrix.arch }}] Flatpak builds failed for: ${{ steps.build_apps.outputs.failed_apps }}"
           exit 1
