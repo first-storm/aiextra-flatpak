@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=ZCode
+Comment=AI coding agent from Z.AI
+GenericName=AI Coding Assistant
+Keywords=AI;Code;Development;Assistant;Agent;ZCode;GLM;
+Exec=ai.z.ZCode %U
+Icon=ai.z.ZCode
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=ai.z.ZCode
+SingleMainWindow=true
+Categories=Development;
+MimeType=x-scheme-handler/zcode;

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>ai.z.ZCode</id>
+  <name>ZCode</name>
+  <summary>AI coding agent from Z.AI</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="ai.z">
+    <name>Z.AI</name>
+  </developer>
+  <description>
+    <p>
+      ZCode is an AI coding agent from Z.AI. This Flatpak wraps the official
+      Linux desktop build; the app itself is downloaded directly from Z.AI's
+      own distribution servers at install time and is not redistributed by
+      this packaging.
+    </p>
+    <p>
+      ZCode's built-in terminal runs inside the Flatpak sandbox and only sees
+      the programs the runtime provides, so git, node and compilers are not
+      available to it. Use Z.AI's own AppImage or .deb if you need the agent
+      to drive a full toolchain.
+    </p>
+  </description>
+  <launchable type="desktop-id">ai.z.ZCode.desktop</launchable>
+  <url type="homepage">https://zcode.z.ai/en</url>
+  <url type="help">https://zcode.z.ai/en/docs/qa</url>
+  <categories>
+    <category>Development</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="3.7.7" date="2026-08-14"/>
+  </releases>
+</component>

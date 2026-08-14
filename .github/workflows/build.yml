@@ -6,6 +6,7 @@ on:
     paths:
       - 'com.openai.ChatGPT/**'
       - 'com.anthropic.Claude/**'
+      - 'ai.z.ZCode/**'
       - 'aiextra.flatpakrepo'
       - '.github/workflows/build.yml'
   workflow_dispatch:
@@ -39,9 +40,9 @@ jobs:
 
       # Seed `repo/` with whatever is already published. flatpak-builder
       # then updates it incrementally (it's a normal OSTree repo, refs are
-      # independent), so if e.g. only Claude's manifest failed to build,
-      # ChatGPT's new ref still gets published and Claude's ref/objects from
-      # the last successful build are carried over untouched instead of
+      # independent), so if e.g. only Claude's manifest failed to build, the
+      # other apps' new refs still get published and Claude's ref/objects
+      # from the last successful build are carried over untouched instead of
       # being wiped out by the publish step.
       - name: Check out existing gh-pages as a starting point
         uses: actions/checkout@v4
@@ -99,10 +100,10 @@ jobs:
       # extra-data sources are not fetched by flatpak-builder (only recorded
       # as {url, sha256, size} metadata for the end user's `flatpak install`
       # to resolve later), so these builds never download the actual
-      # multi-hundred-MB ChatGPT/Claude binaries.
+      # multi-hundred-MB vendor binaries.
       #
       # Each build is independent (continue-on-error): one app failing to
-      # build must not block the other app's update from being published.
+      # build must not block the other apps' updates from being published.
       - name: Build ChatGPT
         id: build-chatgpt
         continue-on-error: true
@@ -119,17 +120,25 @@ jobs:
             --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
             build-claude com.anthropic.Claude/com.anthropic.Claude.yml
 
+      - name: Build ZCode
+        id: build-zcode
+        continue-on-error: true
+        run: |
+          flatpak-builder --force-clean --disable-rofiles-fuse --repo=repo \
+            --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" \
+            build-zcode ai.z.ZCode/ai.z.ZCode.yml
+
       - name: Update repo metadata
-        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success'
+        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success' || steps.build-zcode.outcome == 'success'
         run: flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
 
       - name: Assemble Pages site
-        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success'
+        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success' || steps.build-zcode.outcome == 'success'
         run: |
           cp aiextra.flatpakrepo README.md .nojekyll repo/
 
       - name: Publish to GitHub Pages
-        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success'
+        if: steps.build-chatgpt.outcome == 'success' || steps.build-claude.outcome == 'success' || steps.build-zcode.outcome == 'success'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -139,9 +148,9 @@ jobs:
       # continue-on-error hides individual step failures from the job
       # result, so surface it explicitly here: the workflow run should
       # still show red (and notify) if any app failed, even though the
-      # other app's update was published successfully.
+      # other apps' updates were published successfully.
       - name: Fail the workflow if any app failed to build
-        if: steps.build-chatgpt.outcome == 'failure' || steps.build-claude.outcome == 'failure'
+        if: steps.build-chatgpt.outcome == 'failure' || steps.build-claude.outcome == 'failure' || steps.build-zcode.outcome == 'failure'
         run: |
-          echo "::error::[${{ matrix.arch }}] ChatGPT build: ${{ steps.build-chatgpt.outcome }}, Claude build: ${{ steps.build-claude.outcome }}"
+          echo "::error::[${{ matrix.arch }}] ChatGPT build: ${{ steps.build-chatgpt.outcome }}, Claude build: ${{ steps.build-claude.outcome }}, ZCode build: ${{ steps.build-zcode.outcome }}"
           exit 1

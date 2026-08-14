@@ -1,0 +1,141 @@
+app-id: ai.z.ZCode
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+command: ai.z.ZCode
+separate-locales: false
+tags:
+  - proprietary
+
+# Every entry below was checked against the shipped app.asar rather than
+# copied from the other two apps in this repo; see the comments for what
+# each one is actually for, and the end of the list for what was left out.
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Voice input: the renderer calls
+  # navigator.mediaDevices.getUserMedia({audio: true, video: false}).
+  - --socket=pulseaudio
+  - --device=dri
+  # `import { Notification } from "electron"` — fires on agent task
+  # completion/failure (notification.completed / notification.error).
+  - --talk-name=org.freedesktop.Notifications
+  # powerSaveBlocker keeps the display awake during long agent runs (the app
+  # logs "[keep-awake] powerSaveBlocker started"). Chromium's Linux
+  # implementation inhibits over D-Bus, not through a portal, so without this
+  # the feature silently does nothing.
+  - --talk-name=org.freedesktop.ScreenSaver
+  # Chromium's own password store (the app parses/forwards
+  # --password-store=). ZCode itself keeps credentials in .zcode/config.json
+  # and never calls Electron's safeStorage, so this only affects Chromium's
+  # internal backend selection, same as the other two apps here.
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.kde.kwalletd6
+  # Config/state root, resolved as ${ZCODE_HOME:-$HOME/.zcode} (the remote
+  # runtime under $HOME/.zcode/server lives here too).
+  - --persist=.zcode
+  # ZCode picks workspaces through showOpenDialog({properties:
+  # ["openDirectory"]}), which goes to the file chooser portal under Flatpak,
+  # so directories outside these two are granted per-selection at runtime
+  # instead of up front.
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  # Deliberately NOT granted:
+  #   --talk-name=org.kde.StatusNotifierWatcher
+  #     resolveDesktopTrayIconPath() returns null unless
+  #     process.platform === "win32", so there is no tray on Linux.
+  #   --talk-name=org.freedesktop.Flatpak
+  #     The app has no flatpak-spawn support, so host-command execution would
+  #     not work anyway; granting it would only buy a sandbox escape. The
+  #     cost is that the built-in terminal sees only the runtime (bash,
+  #     coreutils, python3, plus ZCode's bundled ripgrep/bfs/ugrep) and has
+  #     no git, node or compilers. This is documented in the README.
+
+modules:
+  - name: zcode
+    buildsystem: simple
+    build-options:
+      no-debuginfo: true
+      strip: false
+    build-commands:
+      - install -Dm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
+      - install -Dm755 zcode.sh ${FLATPAK_DEST}/bin/${FLATPAK_ID}
+      - install -Dm644 ai.z.ZCode.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 ai.z.ZCode.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - |
+        set -e
+        for f in icons/*.png; do
+          size=${f##*-}
+          size=${size%.png}
+          install -Dm644 "$f" \
+            ${FLATPAK_DEST}/share/icons/hicolor/${size}x${size}/apps/${FLATPAK_ID}.png
+        done
+    sources:
+      # Fetched by the end user's `flatpak install` (not by flatpak-builder)
+      # straight from Z.AI's CDN and verified against the sha256 below.
+      #
+      # Unlike ChatGPT and Claude, Z.AI publishes no apt repo, so the checker
+      # reads https://zcode.z.ai/api/v1/releases/latest instead. That API only
+      # advertises the AppImage as installer_url; the .deb sits next to it
+      # under the same name, so the query rewrites the extension. Both
+      # architectures' .deb files are also listed in electron-builder's
+      # latest.yml alongside the AppImage.
+      - type: extra-data
+        filename: zcode.deb
+        only-arches: [x86_64]
+        url: https://cdn-zcode.z.ai/zcode/electron/releases/3.7.7/linux-x64/ZCode-3.7.7-linux-x64.deb
+        sha256: fe6f647d9b37f89bee12843cbbafd5a8fd0b33363941f32ee15e8e79f0856c63
+        size: 138243788
+        x-checker-data:
+          type: json
+          url: https://zcode.z.ai/api/v1/releases/latest
+          version-query: .version
+          url-query: >-
+            .platforms["linux-x86_64"].installer_url
+            | sub("\\.AppImage$"; ".deb")
+          timestamp-query: .pub_date
+          is-main-source: true
+      - type: extra-data
+        filename: zcode.deb
+        only-arches: [aarch64]
+        url: https://cdn-zcode.z.ai/zcode/electron/releases/3.7.7/linux-arm64/ZCode-3.7.7-linux-arm64.deb
+        sha256: 0de2ddb7cd47d0d58a765446df05fce0d8bb2b1c1128d910eba7765668fd7e9a
+        size: 132401376
+        x-checker-data:
+          type: json
+          url: https://zcode.z.ai/api/v1/releases/latest
+          version-query: .version
+          url-query: >-
+            .platforms["linux-aarch64"].installer_url
+            | sub("\\.AppImage$"; ".deb")
+          timestamp-query: .pub_date
+      - type: file
+        path: zcode.sh
+      - type: file
+        path: ai.z.ZCode.desktop
+      - type: file
+        path: ai.z.ZCode.metainfo.xml
+      - type: dir
+        path: icons
+        dest: icons
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          # The .deb is an ar archive containing a data.tar.{xz,zst,...}. Z.AI
+          # installs under /opt (not /usr/lib like the other two vendors), so
+          # the app lives at opt/ZCode/ inside it — hence strip depth 3, which
+          # flattens ./opt/ZCode into the current directory (/app/extra).
+          - bsdtar -Oxf zcode.deb 'data.tar*' | bsdtar -xf - --strip-components=3
+            ./opt/ZCode
+          - rm zcode.deb
+          # Make Electron report our Flatpak app ID as its Wayland app_id /
+          # X11 WM_CLASS so window/taskbar/icon association works. Upstream
+          # ships StartupWMClass=ZCode, which would not match otherwise.
+          - patch-electron-desktop-filename --desktop-filename ai.z.ZCode
+            --skip-integrity-check resources/app.asar
