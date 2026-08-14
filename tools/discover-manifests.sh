@@ -11,59 +11,34 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${1:-"${SCRIPT_DIR}/.."}" && pwd)"
-
-MANIFESTS_DIR="${REPO_ROOT}/manifests"
-if [[ ! -d "${MANIFESTS_DIR}" ]]; then
-  echo "Error: Missing manifests directory in ${REPO_ROOT}" >&2
-  exit 1
-fi
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 manifests=()
 
-for entry in "${MANIFESTS_DIR}"/*; do
-  [[ -d "${entry}" ]] || continue
+for entry in "${REPO_ROOT}"/manifests/*/; do
+  app_id="$(basename "${entry}")"
 
-  dirname="$(basename "${entry}")"
-  yml_file="${entry}/${dirname}.yml"
-  yaml_file="${entry}/${dirname}.yaml"
+  for manifest in "${entry}${app_id}.yml" "${entry}${app_id}.yaml"; do
+    [[ -f "${manifest}" ]] || continue
 
-  has_yml=false
-  has_yaml=false
-  [[ -f "${yml_file}" ]] && has_yml=true
-  [[ -f "${yaml_file}" ]] && has_yaml=true
+    # Catch the classic copy-paste mistake when adding an app: the manifest
+    # still declares the app ID it was copied from.
+    declared="$(awk '$1 == "app-id:" { print $2; exit }' "${manifest}" | tr -d "\"'")"
+    if [[ -n "${declared}" && "${declared}" != "${app_id}" ]]; then
+      echo "Error: ${manifest} declares app-id '${declared}', expected '${app_id}'" >&2
+      exit 1
+    fi
 
-  if ${has_yml} && ${has_yaml}; then
-    echo "Error: Duplicate manifests found for ${dirname} (${dirname}.yml and ${dirname}.yaml)" >&2
-    exit 1
-  fi
-
-  manifest=""
-  if ${has_yml}; then
-    manifest="${yml_file}"
-  elif ${has_yaml}; then
-    manifest="${yaml_file}"
-  else
-    continue
-  fi
-
-  # Validate that app-id matches directory name if app-id is present in manifest
-  app_id="$(awk '$1 == "app-id:" { print $2; exit }' "${manifest}" | tr -d '"' | tr -d "'")"
-  if [[ -n "${app_id}" && "${app_id}" != "${dirname}" ]]; then
-    echo "Error: Manifest ${manifest} specifies app-id '${app_id}', expected '${dirname}'" >&2
-    exit 1
-  fi
-
-  # Store relative path to REPO_ROOT
-  manifest_rel="${manifest#"${REPO_ROOT}/"}"
-  manifests+=("${manifest_rel}")
+    manifests+=("${manifest#"${REPO_ROOT}/"}")
+    break # .yml wins if both extensions somehow exist
+  done
 done
 
+# Also covers a missing manifests/ directory: the glob then matches nothing.
 if [[ ${#manifests[@]} -eq 0 ]]; then
-  echo "Error: No valid Flatpak manifests found in ${REPO_ROOT}" >&2
+  echo "Error: No application manifests found under ${REPO_ROOT}/manifests" >&2
   exit 1
 fi
 
-# Output sorted manifest paths
-printf '%s\n' "${manifests[@]}" | sort
+# Glob expansion is already sorted.
+printf '%s\n' "${manifests[@]}"

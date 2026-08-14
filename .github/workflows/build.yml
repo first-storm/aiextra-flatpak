@@ -108,17 +108,16 @@ jobs:
         continue-on-error: true
         run: bash tools/build-apps.sh
 
-      - name: Update repo metadata
-        if: always() && steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
-        run: flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
-
-      - name: Assemble Pages site
-        if: always() && steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
+      # An empty success_count means build-apps.sh died before reporting, so
+      # there is nothing to sign or publish.
+      - name: Sign repo metadata and assemble Pages site
+        if: steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
         run: |
+          flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
           cp aiextra.flatpakrepo README.md .nojekyll repo/
 
       - name: Publish to GitHub Pages
-        if: always() && steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
+        if: steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -128,9 +127,10 @@ jobs:
       # continue-on-error hides individual build failures from the step
       # result, so surface it explicitly here: the workflow run should
       # still show red (and notify) if any app failed, even though the
-      # other apps' updates were published successfully.
+      # other apps' updates were published successfully. An empty
+      # failure_count (script died early) also trips this.
       - name: Fail the workflow if any app failed to build
-        if: always() && (steps.build_apps.outputs.failure_count != '0' || steps.build_apps.outcome == 'failure')
+        if: steps.build_apps.outputs.failure_count != '0'
         run: |
           echo "::error::[${{ matrix.arch }}] Flatpak builds failed for: ${{ steps.build_apps.outputs.failed_apps }}"
           exit 1

@@ -16,11 +16,6 @@ concurrency:
 jobs:
   flatpak-external-data-checker:
     runs-on: ubuntu-latest
-    env:
-      GIT_AUTHOR_NAME: flatpak-external-data-checker
-      GIT_COMMITTER_NAME: flatpak-external-data-checker
-      GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
-      GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,10 +33,10 @@ jobs:
         continue-on-error: true
         run: bash tools/check-updates.sh
 
-      # if: always() so an update an earlier checker already committed still
-      # ships when a later one fails; the failed step keeps the run red.
+      # Runs even when a checker failed (continue-on-error above), so an update
+      # an earlier checker already committed still ships; the final step keeps
+      # the run red.
       - name: Push updates and rebuild
-        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -55,9 +50,10 @@ jobs:
           gh workflow run build.yml --ref main
 
       # Ensure the workflow run is marked red if any application checker failed,
-      # after any successful updates have already been pushed.
+      # after any successful updates have already been pushed. An empty
+      # failure_count (script died early) also trips this.
       - name: Fail workflow if any checker failed
-        if: always() && (steps.checker.outputs.failure_count != '0' || steps.checker.outcome == 'failure')
+        if: steps.checker.outputs.failure_count != '0'
         run: |
           echo "::error::External data checker failed for: ${{ steps.checker.outputs.failed_apps }}"
           exit 1
