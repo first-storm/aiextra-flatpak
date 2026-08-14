@@ -46,3 +46,22 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --update --never-fork com.anthropic.Claude/com.anthropic.Claude.yml
+
+      # The checker doesn't merge PRs on its own here: it only auto-merges
+      # when the repo has a flathub.json with automerge-flathubbot-prs, or
+      # for BROKEN-source fixes, and it gates that on CI status which this
+      # repo never posts. Merge every update-* PR directly so build.yml
+      # (push-to-main triggered) actually republishes the update. if:
+      # always() so a failure in one Check step doesn't skip merging a PR
+      # the other step already opened.
+      - name: Merge update PRs
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr list --repo "$GITHUB_REPOSITORY" --base main --state open \
+            --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("update-")) | .number' |
+          while read -r pr; do
+            gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --rebase --delete-branch
+          done
