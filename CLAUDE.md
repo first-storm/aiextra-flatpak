@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-This repository packages unofficial Flatpak wrappers for the proprietary Linux releases of desktop applications (e.g. ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, and ZCode `ai.z.ZCode`). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
+This repository packages unofficial Flatpak wrappers for upstream-published Linux releases of AI desktop applications (currently ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, and ZCode `ai.z.ZCode`; more may be added, and they are not necessarily closed-source). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
+
+User-facing descriptions — `README.md`'s intro and `aiextra.flatpakrepo`'s `Comment`/`Description` — are deliberately app-agnostic so that adding an application does not require rewriting them. Keep them that way: the packaged apps are enumerated only in the README's `Apps` table.
 
 Run commands below from the repository root.
 
@@ -61,7 +63,7 @@ Review checker-generated manifest changes together with the prepended release en
 
 Each directory under `manifests/<app-id>/` is one package unit containing a manifest, shell launcher, desktop entry, AppStream metainfo, and size-specific icons. The app ID is coupled across these assets: manifest and metadata filenames, `command`, installed launcher, desktop `Exec`/`Icon`/`StartupWMClass`, metainfo ID and launchable desktop ID, icon filename prefix, and Electron patch target must remain aligned.
 
-Each manifest contains two `extra-data` sources—one for `x86_64`, one for `aarch64`—with vendor URL, size, SHA256, and `x-checker-data`. `flatpak-builder` records these sources but intentionally does not download the large proprietary payload during CI.
+Each manifest contains two `extra-data` sources—one for `x86_64`, one for `aarch64`—with vendor URL, size, SHA256, and `x-checker-data`. `flatpak-builder` records these sources but intentionally does not download the large upstream payload during CI.
 
 The checker type follows what the vendor publishes. OpenAI and Anthropic serve apt repositories, so those manifests use `type: debian-repo`. Z.AI serves only a CDN plus a releases API, so `ai.z.ZCode` uses `type: json` against `https://zcode.z.ai/api/v1/releases/latest`; that API advertises only the AppImage, and the `url-query` rewrites the extension to reach the `.deb` published beside it. Keep the two per-architecture queries pointed at `.platforms["linux-x86_64"]` and `.platforms["linux-aarch64"]` respectively, and `is-main-source: true` on the `x86_64` source only.
 
@@ -91,7 +93,7 @@ Adding a new application **does not require editing any GitHub Actions workflows
    tools/discover-manifests.sh
    flatpak-builder --force-clean --disable-rofiles-fuse build-<app-id> manifests/<app-id>/<app-id>.yml
    ```
-5. Update `README.md` install command and `aiextra.flatpakrepo` description if the app is ready for users.
+5. If the app is ready for users, add a row to the `Apps` table in `README.md`. The install command and the `aiextra.flatpakrepo` description are app-agnostic and must not be re-specialized to name individual apps.
 
 ## CI and publication flow
 
