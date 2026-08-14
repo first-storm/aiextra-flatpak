@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   flatpak-external-data-checker:
@@ -19,9 +20,11 @@ jobs:
       # flatpak-external-data-checker resolves each manifest's
       # x-checker-data (type: debian-repo) against OpenAI's / Anthropic's
       # apt repo indexes, and rewrites the extra-data url/sha256/size in
-      # place when a newer version is published. --never-fork commits
-      # straight to main instead of opening a PR, which in turn triggers
-      # build.yml to rebuild and republish to GitHub Pages.
+      # place when a newer version is published. --never-fork pushes the
+      # update branch to this repo instead of forking, but it still opens
+      # a PR against main via the GitHub API, so pull-requests: write is
+      # required. Merging that PR triggers build.yml to rebuild and
+      # republish to GitHub Pages.
       - name: Check ChatGPT manifest
         uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
         env:
