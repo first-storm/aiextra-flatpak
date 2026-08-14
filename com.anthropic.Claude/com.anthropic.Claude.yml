@@ -1,9 +1,9 @@
 app-id: com.anthropic.Claude
 runtime: org.freedesktop.Platform
-runtime-version: "25.08"
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
-base-version: "25.08"
+base-version: '25.08'
 command: com.anthropic.Claude
 separate-locales: false
 tags:
@@ -53,9 +53,9 @@ modules:
       - type: extra-data
         filename: claude-desktop.deb
         only-arches: [x86_64]
-        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.28929.0_amd64.deb
-        sha256: 3ceb391268bde9a7fec32520d349b704043166204cdd571c62d1e950701f48fc
-        size: 172264532
+        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_amd64.deb
+        sha256: 09e41a20a5b47ea0e5bc226d4fffa77af43ad450c7cbf5e66e56d6e4fd4ad2e9
+        size: 172617692
         x-checker-data:
           type: debian-repo
           package-name: claude-desktop
@@ -66,9 +66,9 @@ modules:
       - type: extra-data
         filename: claude-desktop.deb
         only-arches: [aarch64]
-        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.28929.0_arm64.deb
-        sha256: 7a5b8bd5fcda0a6b1a6b3711e0142704662e44938a94683068fd90c398c7394d
-        size: 164372324
+        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_arm64.deb
+        sha256: 16949f5c06387806bd01eb1b2b402af8ed515d37e4ffc6f2d6aae5808af873c8
+        size: 164573252
         x-checker-data:
           type: debian-repo
           package-name: claude-desktop
@@ -92,10 +92,12 @@ modules:
           # read the ar container directly, so pipe its data member straight
           # into a second bsdtar that unpacks just that subtree, flattened
           # into the current directory (/app/extra).
-          - bsdtar -Oxf claude-desktop.deb 'data.tar*' | bsdtar -xf - --strip-components=4 ./usr/lib/claude-desktop
+          - bsdtar -Oxf claude-desktop.deb 'data.tar*' | bsdtar -xf - --strip-components=4
+            ./usr/lib/claude-desktop
           - rm claude-desktop.deb
           # Make Electron report our Flatpak app ID as its Wayland app_id /
           # X11 WM_CLASS so window/taskbar/icon association works. Anthropic
           # already ships an upstream .desktop with
           # StartupWMClass=com.anthropic.Claude, so this keeps that intact.
-          - patch-electron-desktop-filename --desktop-filename com.anthropic.Claude --skip-integrity-check resources/app.asar
+          - patch-electron-desktop-filename --desktop-filename com.anthropic.Claude
+            --skip-integrity-check resources/app.asar
