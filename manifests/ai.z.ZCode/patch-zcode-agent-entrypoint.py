@@ -33,7 +33,7 @@ def main() -> None:
     if contents[insertion_offset:].startswith(REQUIRE_SHIM):
         return
 
-    entrypoint.write_bytes(
+    _ = entrypoint.write_bytes(
         contents[:insertion_offset] + prelude + contents[insertion_offset:]
     )
 
