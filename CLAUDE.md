@@ -22,16 +22,18 @@ flatpak install -y flathub \
   org.electronjs.Electron2.BaseApp//25.08
 ```
 
-Discover all application manifests in the repository:
+Discover all application manifests in the repository (or pass optional app IDs / manifest paths to filter):
 
 ```sh
 tools/discover-manifests.sh
+tools/discover-manifests.sh com.openai.ChatGPT
 ```
 
-Build all discovered applications into a shared repository (requires `GPG_KEY_ID` and `GNUPGHOME` for signing in CI, or omit them for unsigned local builds):
+Build applications into a shared repository (builds all discovered manifests, or pass specific app IDs; requires `GPG_KEY_ID` and `GNUPGHOME` for signing in CI, or omit them for unsigned local builds):
 
 ```sh
 tools/build-apps.sh
+tools/build-apps.sh com.openai.ChatGPT
 
 flatpak build-update-repo \
   --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
@@ -45,19 +47,20 @@ flatpak-builder --force-clean --disable-rofiles-fuse build-com.openai.ChatGPT ma
 
 There is no test suite, linter, formatter, or static-check configuration. Building one app is the targeted validation equivalent; there is no single-test command. Generated state is ignored under `.flatpak-builder/`, `build-*`, `repo/`, and `*.flatpak`.
 
-The automated upstream update check across all discovered manifests is run by:
+The automated upstream update check across all discovered manifests (or for specific apps) is run by:
 
 ```sh
 tools/check-updates.sh
+tools/check-updates.sh com.openai.ChatGPT
 ```
 
-Or for a single manifest:
+Or for a single manifest directly:
 
 ```sh
 flatpak-external-data-checker --update --commit-to-current-branch manifests/com.openai.ChatGPT/com.openai.ChatGPT.yml
 ```
 
-Review checker-generated manifest changes together with the prepended release entries in the matching metainfo file. The GitHub workflow commits directly to `main`, pushes, then explicitly dispatches `build.yml` because a `GITHUB_TOKEN` push does not trigger another workflow.
+Review checker-generated manifest changes together with the prepended release entries in the matching metainfo file. The GitHub workflow commits directly to `main`, pushes, then explicitly dispatches `build.yml` with the updated app IDs (`-f apps=...`) so that only changed applications are rebuilt.
 
 ## Package architecture
 
@@ -103,7 +106,7 @@ Within each architecture job, CI:
 
 1. Seeds `repo/` from the existing `gh-pages` branch.
 2. Imports the private GPG key and installs the runtime, SDK, and Electron BaseApp.
-3. Dynamically discovers and builds all application manifests in the repository via `tools/build-apps.sh`.
+3. Dynamically determines target applications (from dispatch inputs, or from `git diff` for changes isolated to `manifests/<app-id>/`, falling back to all apps if shared tooling/workflows changed) and builds them via `tools/build-apps.sh`.
 4. Signs updated repository metadata and publishes `repo/` back to `gh-pages` if at least one build succeeded.
 5. Fails the workflow job if any application build failed, surfacing the list of failed app IDs in `::error::`.
 

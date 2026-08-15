@@ -3,7 +3,6 @@
 import pathlib
 import sys
 
-
 STRICT_DIRECTIVES = (b'"use strict";', b"'use strict';")
 REQUIRE_SHIM = b'require("/app/lib/zcode-portal-cwd.cjs");'
 

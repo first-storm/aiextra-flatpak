@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
 # check-updates.sh
-# Dynamically discovers all Flatpak application manifests and runs
+# Dynamically discovers Flatpak application manifests and runs
 # flatpak-external-data-checker on each of them.
+# If arguments are provided, only specified applications are checked.
 #
 # Environment variables:
 #   GITHUB_OUTPUT - GitHub Actions output file path (if running in CI)
@@ -13,7 +14,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
 
-manifest_list="$(tools/discover-manifests.sh)"
+manifest_list="$(tools/discover-manifests.sh "$@")"
 mapfile -t manifests <<<"${manifest_list}"
 
 # Prefer a locally installed checker; otherwise run the Flathub image, which is
@@ -72,6 +73,7 @@ if [[ -f "${GITHUB_OUTPUT:-}" ]]; then
     {
         echo "failure_count=${#failed_apps[@]}"
         echo "failed_apps=${failed_apps[*]:-}"
+        echo "updated_apps=${updated_apps[*]:-}"
     } >>"${GITHUB_OUTPUT}"
 fi
 

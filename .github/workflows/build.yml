@@ -8,6 +8,12 @@ on:
       - "CLAUDE.md"
       - ".github/workflows/update-check.yml"
   workflow_dispatch:
+    inputs:
+      apps:
+        description: "Space- or comma-separated app IDs to build (leave empty for all)"
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: build-publish
@@ -35,6 +41,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Seed `repo/` with whatever is already published. flatpak-builder
       # then updates it incrementally (it's a normal OSTree repo, refs are
@@ -95,18 +103,30 @@ jobs:
             org.freedesktop.Sdk//25.08 \
             org.electronjs.Electron2.BaseApp//25.08
 
+      # Determine which applications to build.
+      # If specific apps were requested via workflow_dispatch or update-check, build only those.
+      # On git push, inspect git diff: if changes are isolated to specific manifests/<app-id>/,
+      # build only those apps; if shared tooling/workflows changed, build all apps.
+      - name: Determine applications to build
+        id: target_apps
+        env:
+          INPUT_APPS: ${{ inputs.apps }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: bash tools/determine-target-apps.sh
+
       # extra-data sources are not fetched by flatpak-builder (only recorded
       # as {url, sha256, size} metadata for the end user's `flatpak install`
       # to resolve later), so these builds never download the actual
       # multi-hundred-MB vendor binaries.
       #
-      # Dynamically discovers and builds all Flatpak manifests.
+      # Builds specified or discovered Flatpak manifests.
       # Each build is independent: one app failing to build must not block
       # other apps' updates from being published.
-      - name: Build all Flatpak applications
+      - name: Build Flatpak applications
         id: build_apps
         continue-on-error: true
-        run: bash tools/build-apps.sh
+        run: bash tools/build-apps.sh ${{ steps.target_apps.outputs.apps }}
 
       # An empty success_count means build-apps.sh died before reporting, so
       # there is nothing to sign or publish.

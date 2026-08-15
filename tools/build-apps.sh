@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # build-apps.sh
-# Dynamically discovers and builds all Flatpak applications into a shared OSTree repo.
+# Dynamically discovers and builds Flatpak applications into a shared OSTree repo.
+# If arguments are provided, only specified applications are built.
 #
 # Environment variables:
 #   GPG_KEY_ID    - Optional GPG key ID for signing commits
@@ -14,7 +15,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
 
-manifest_list="$(tools/discover-manifests.sh)"
+manifest_list="$(tools/discover-manifests.sh "$@")"
 mapfile -t manifests <<<"${manifest_list}"
 
 successful_apps=()

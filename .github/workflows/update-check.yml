@@ -47,7 +47,7 @@ jobs:
           git push origin main
           # Pushes authenticated with GITHUB_TOKEN don't trigger other
           # workflows, so build.yml has to be dispatched explicitly.
-          gh workflow run build.yml --ref main
+          gh workflow run build.yml --ref main -f apps="${{ steps.checker.outputs.updated_apps }}"
 
       # Ensure the workflow run is marked red if any application checker failed,
       # after any successful updates have already been pushed. An empty
