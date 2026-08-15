@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
   <id>com.openai.ChatGPT</id>
   <name>ChatGPT</name>
@@ -23,11 +23,14 @@
     <category>Utility</category>
     <category>Development</category>
   </categories>
-  <content_rating type="oars-1.1" />
+  <content_rating type="oars-1.1"/>
   <releases>
-    <release version="26.810.41047" date="2026-08-13">
-      <description />
+    <release version="26.810.50856" date="2026-08-14">
+      <description></description>
     </release>
-    <release version="26.803.81509" date="2026-08-11" />
+    <release version="26.810.41047" date="2026-08-13">
+      <description/>
+    </release>
+    <release version="26.803.81509" date="2026-08-11"/>
   </releases>
 </component>
