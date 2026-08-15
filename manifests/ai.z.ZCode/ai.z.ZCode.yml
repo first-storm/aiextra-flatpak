@@ -63,6 +63,8 @@ modules:
     build-commands:
       - install -Dm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
       - install -Dm755 zcode.sh ${FLATPAK_DEST}/bin/${FLATPAK_ID}
+      - install -Dm644 zcode-portal-cwd.cjs ${FLATPAK_DEST}/lib/zcode-portal-cwd.cjs
+      - install -Dm755 patch-zcode-agent-entrypoint.py ${FLATPAK_DEST}/libexec/patch-zcode-agent-entrypoint
       - install -Dm644 ai.z.ZCode.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
       - install -Dm644 ai.z.ZCode.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
       - |
@@ -115,6 +117,10 @@ modules:
       - type: file
         path: zcode.sh
       - type: file
+        path: zcode-portal-cwd.cjs
+      - type: file
+        path: patch-zcode-agent-entrypoint.py
+      - type: file
         path: ai.z.ZCode.desktop
       - type: file
         path: ai.z.ZCode.metainfo.xml
@@ -136,3 +142,9 @@ modules:
           # ships StartupWMClass=ZCode, which would not match otherwise.
           - patch-electron-desktop-filename --desktop-filename ai.z.ZCode
             --skip-integrity-check resources/app.asar
+          # Electron's embedded Node cannot resolve getcwd() for a selected
+          # document-portal directory even though the directory is usable.
+          # Load the compatibility shim only in the external agent CLI. This
+          # entrypoint is a stable packaging boundary and avoids patching the
+          # version-specific, minified app.asar bundle.
+          - /app/libexec/patch-zcode-agent-entrypoint resources/glm/zcode.cjs
