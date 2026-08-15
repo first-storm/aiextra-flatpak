@@ -1,5 +1,10 @@
 # aiextra-flatpak
 
+> [!NOTE]
+> **Relationship to Flathub & Proof of Concept**
+>
+> This repository provides independently maintained Flatpak wrappers and serves as a reference proof of concept (PoC). In accordance with [Flathub's Generative AI policy](https://docs.flathub.org/docs/for-app-authors/requirements), manifests from this repository are not submitted to Flathub as-is. You are welcome to reference or adapt anything here for your own Flathub submissions under the MIT License.
+
 Unofficial Flatpak packaging for AI desktop apps, served from this repo's
 GitHub Pages.
 
