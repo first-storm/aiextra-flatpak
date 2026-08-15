@@ -77,7 +77,7 @@ Vendors do not agree on where the payload lives inside the `.deb`, so the `--str
 
 The installed shell launcher runs the extracted vendor executable through `zypak-wrapper` and sets `TMPDIR=$XDG_CACHE_HOME`. ChatGPT also deliberately persists `.codex` through its manifest permissions, and ZCode `.zcode`.
 
-`ai.z.ZCode`'s `finish-args` are derived from what its `app.asar` actually uses rather than copied from other apps, and the manifest carries per-line comments recording that evidence—including for permissions deliberately withheld (`org.kde.StatusNotifierWatcher`, because its tray code is Windows-only; `org.freedesktop.Flatpak`, because the app has no `flatpak-spawn` support). Do not widen them without re-checking the payload.
+`ai.z.ZCode`'s `finish-args` are derived from what its `app.asar` actually uses rather than copied from other apps, and the manifest carries per-line comments recording that evidence—including for permissions deliberately withheld (`org.kde.StatusNotifierWatcher`, because its tray code is Windows-only). `org.freedesktop.Flatpak` is granted so ZCode can request host-side command execution through Flatpak's D-Bus API. Do not widen the remaining permissions without re-checking the payload.
 
 Icon installation derives the size from filenames shaped as `<app-id>-<size>.png`; preserve that naming scheme when changing icons.
 

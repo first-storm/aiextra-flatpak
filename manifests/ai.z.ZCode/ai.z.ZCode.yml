@@ -29,6 +29,9 @@ finish-args:
   # implementation inhibits over D-Bus, not through a portal, so without this
   # the feature silently does nothing.
   - --talk-name=org.freedesktop.ScreenSaver
+  # Allow ZCode to request host-side command execution through Flatpak's
+  # D-Bus API.
+  - --talk-name=org.freedesktop.Flatpak
   # Chromium's own password store (the app parses/forwards
   # --password-store=). ZCode itself keeps credentials in .zcode/config.json
   # and never calls Electron's safeStorage, so this only affects Chromium's
@@ -50,12 +53,6 @@ finish-args:
   #   --talk-name=org.kde.StatusNotifierWatcher
   #     resolveDesktopTrayIconPath() returns null unless
   #     process.platform === "win32", so there is no tray on Linux.
-  #   --talk-name=org.freedesktop.Flatpak
-  #     The app has no flatpak-spawn support, so host-command execution would
-  #     not work anyway; granting it would only buy a sandbox escape. The
-  #     cost is that the built-in terminal sees only the runtime (bash,
-  #     coreutils, python3, plus ZCode's bundled ripgrep/bfs/ugrep) and has
-  #     no git, node or compilers. This is documented in the README.
 
 modules:
   - name: zcode
