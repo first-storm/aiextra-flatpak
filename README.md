@@ -1,25 +1,34 @@
 # aiextra-flatpak
 
-Unofficial Flatpak packaging for ChatGPT Desktop, Claude Desktop, and ZCode,
-served from this repo's GitHub Pages. Not on Flathub.
+Unofficial Flatpak packaging for AI desktop apps, served from this repo's
+GitHub Pages.
 
 The app binaries aren't here. The manifests use Flatpak's [`extra-data` source
 type](https://docs.flatpak.org/en/latest/module-sources.html#extra-data), so
-`flatpak install` downloads each app on your machine, from the vendors' own
-servers (OpenAI and Anthropic via apt repos, Z.AI via its releases API), and
-verifies it against the sha256 in the manifest.
+`flatpak install` downloads each app on your machine, from its own upstream
+servers (an apt repo or a releases API, depending on what the app publishes),
+and verifies it against the sha256 in the manifest.
 This repo is only the wrapper: desktop file, icons, sandbox permissions,
 launcher.
+
+## Apps
+
+| App | ID |
+| --- | --- |
+| ChatGPT Desktop | `com.openai.ChatGPT` |
+| Claude Desktop | `com.anthropic.Claude` |
+| ZCode | `ai.z.ZCode` |
 
 ## Install
 
 ```sh
 flatpak remote-add --if-not-exists aiextra https://first-storm.github.io/aiextra-flatpak/aiextra.flatpakrepo
-flatpak install aiextra com.openai.ChatGPT com.anthropic.Claude ai.z.ZCode
+flatpak install aiextra <app-id>
 ```
 
-Published builds cover both x86_64 and aarch64; `flatpak install` picks the
-ref matching your machine automatically.
+Pick an ID from the table above; `flatpak install` also takes several at once.
+Published builds cover both x86_64 and aarch64, and it picks the ref matching
+your machine automatically.
 
 ## Signing
 
@@ -46,5 +55,5 @@ New upstream builds and wrapper changes both reach you through
 
 All packaged apps run under [zypak](https://github.com/refi64/zypak), from
 `org.electronjs.Electron2.BaseApp`, so Chromium's sandbox works inside the
-Flatpak sandbox. Claude Desktop for Linux is still a beta. The files under
-`.github/workflows/` and `tools/` are commented if you want the rest.
+Flatpak sandbox. The files under `.github/workflows/` and `tools/` are
+commented if you want the rest.
