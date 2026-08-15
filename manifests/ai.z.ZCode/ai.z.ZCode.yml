@@ -42,12 +42,9 @@ finish-args:
   # Config/state root, resolved as ${ZCODE_HOME:-$HOME/.zcode} (the remote
   # runtime under $HOME/.zcode/server lives here too).
   - --persist=.zcode
-  # ZCode picks workspaces through showOpenDialog({properties:
-  # ["openDirectory"]}), which goes to the file chooser portal under Flatpak,
-  # so directories outside these two are granted per-selection at runtime
-  # instead of up front.
-  - --filesystem=xdg-download
-  - --filesystem=xdg-documents
+  # Allow access to the user's home directory so ZCode workspaces, agent,
+  # and terminal can access project files and user configs directly.
+  - --filesystem=home
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
   # Deliberately NOT granted:
   #   --talk-name=org.kde.StatusNotifierWatcher
