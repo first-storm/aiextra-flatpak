@@ -10,8 +10,8 @@
 #   BEFORE_SHA    - Git commit SHA before the push event
 #   GITHUB_OUTPUT - GitHub Actions output file path (if running in CI)
 #
-# Output: space-separated app IDs to build (or empty for all apps), printed to stdout
-# and written to GITHUB_OUTPUT as 'apps=...' if running in CI.
+# Output: space-separated app IDs to build (or empty for all apps), printed to stdout.
+# In CI, writes both `apps` and a native-runner `matrix` to GITHUB_OUTPUT.
 #
 
 set -euo pipefail
@@ -19,15 +19,65 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
 
+emit_plan() {
+    local target_apps="${1:-}"
+    local manifest_list
+    local manifest
+    local app_id
+    local arch
+    local has_x86_64=false
+    local has_aarch64=false
+    local matrix
+    local output_apps=""
+    local -a resolved_apps=()
+
+    if [[ -n "${target_apps}" ]]; then
+        manifest_list="$(tools/discover-manifests.sh "${target_apps}")"
+    else
+        manifest_list="$(tools/discover-manifests.sh)"
+    fi
+
+    while IFS= read -r manifest; do
+        app_id="${manifest%/*}"
+        resolved_apps+=("${app_id##*/}")
+        while IFS= read -r arch; do
+            case "${arch}" in
+                x86_64) has_x86_64=true ;;
+                aarch64) has_aarch64=true ;;
+            esac
+        done <"${manifest%/*}/architectures"
+    done <<<"${manifest_list}"
+
+    if [[ -n "${target_apps}" ]]; then
+        output_apps="${resolved_apps[*]}"
+    fi
+
+    if [[ "${has_x86_64}" = true && "${has_aarch64}" = true ]]; then
+        matrix='{"include":[{"arch":"x86_64","runner":"ubuntu-latest"},{"arch":"aarch64","runner":"ubuntu-24.04-arm"}]}'
+    elif [[ "${has_x86_64}" = true ]]; then
+        matrix='{"include":[{"arch":"x86_64","runner":"ubuntu-latest"}]}'
+    elif [[ "${has_aarch64}" = true ]]; then
+        matrix='{"include":[{"arch":"aarch64","runner":"ubuntu-24.04-arm"}]}'
+    else
+        echo "Error: No configured architectures found for target applications" >&2
+        exit 1
+    fi
+
+    if [[ -f "${GITHUB_OUTPUT:-}" ]]; then
+        {
+            echo "apps=${output_apps}"
+            echo "matrix=${matrix}"
+        } >>"${GITHUB_OUTPUT}"
+    fi
+    echo "${output_apps}"
+}
+
 # If explicit targets are passed as CLI args or INPUT_APPS, use them
 target_input="${*:-${INPUT_APPS:-}}"
 
 if [[ -n "${target_input}" && "${target_input}" != "all" ]]; then
     echo "Target apps explicitly specified: ${target_input}" >&2
-    if [[ -f "${GITHUB_OUTPUT:-}" ]]; then
-        echo "apps=${target_input}" >>"${GITHUB_OUTPUT}"
-    fi
-    echo "${target_input}"
+    emit_plan "${target_input}"
     exit 0
 fi
 
@@ -63,19 +113,13 @@ if [[ "${event_name}" = "push" || -z "${event_name}" ]]; then
         done <<<"${changed_files}"
 
         if [[ "${build_all}" = false && ${#app_ids[@]} -gt 0 ]]; then
-            unique_apps=($(printf '%s\n' "${app_ids[@]}" | sort -u))
+            mapfile -t unique_apps < <(printf '%s\n' "${app_ids[@]}" | sort -u)
             echo "Target apps from git diff: ${unique_apps[*]}" >&2
-            if [[ -f "${GITHUB_OUTPUT:-}" ]]; then
-                echo "apps=${unique_apps[*]}" >>"${GITHUB_OUTPUT}"
-            fi
-            echo "${unique_apps[*]}"
+            emit_plan "${unique_apps[*]}"
             exit 0
         fi
     fi
 fi
 
 echo "Building all applications." >&2
-if [[ -f "${GITHUB_OUTPUT:-}" ]]; then
-    echo "apps=" >>"${GITHUB_OUTPUT}"
-fi
-echo ""
+emit_plan ""

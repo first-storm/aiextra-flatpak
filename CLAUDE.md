@@ -64,9 +64,11 @@ Review checker-generated manifest changes together with the prepended release en
 
 ## Package architecture
 
-Each directory under `manifests/<app-id>/` is one package unit containing a manifest, shell launcher, desktop entry, AppStream metainfo, and size-specific icons. The app ID is coupled across these assets: manifest and metadata filenames, `command`, installed launcher, desktop `Exec`/`Icon`/`StartupWMClass`, metainfo ID and launchable desktop ID, icon filename prefix, and Electron patch target must remain aligned.
+Each directory under `manifests/<app-id>/` is one package unit containing a manifest, an `architectures` file, shell launcher, desktop entry, AppStream metainfo, and size-specific icons. The app ID is coupled across these assets: manifest and metadata filenames, `command`, installed launcher, desktop `Exec`/`Icon`/`StartupWMClass`, metainfo ID and launchable desktop ID, icon filename prefix, and Electron patch target must remain aligned.
 
-Each manifest contains two `extra-data` sources—one for `x86_64`, one for `aarch64`—with vendor URL, size, SHA256, and `x-checker-data`. `flatpak-builder` records these sources but intentionally does not download the large upstream payload during CI.
+`architectures` is the CI build/publication interface for that application. It contains exactly one or both Flatpak architecture names (`x86_64` and `aarch64`), one per line. Discovery rejects missing, empty, duplicate, or unknown values. Once a configured architecture builds successfully, CI removes any previously published refs for architectures no longer listed; failed replacement builds leave old refs intact.
+
+Each current manifest contains two `extra-data` sources—one for `x86_64`, one for `aarch64`—with vendor URL, size, SHA256, and `x-checker-data`. `flatpak-builder` records the source matching the current architecture but intentionally does not download the large upstream payload during CI. The `architectures` file controls which native builds are published without removing the other source's update metadata.
 
 The checker type follows what the vendor publishes. OpenAI and Anthropic serve apt repositories, so those manifests use `type: debian-repo`. Z.AI serves only a CDN plus a releases API, so `ai.z.ZCode` uses `type: json` against `https://zcode.z.ai/api/v1/releases/latest`; that API advertises only the AppImage, and the `url-query` rewrites the extension to reach the `.deb` published beside it. Keep the two per-architecture queries pointed at `.platforms["linux-x86_64"]` and `.platforms["linux-aarch64"]` respectively, and `is-main-source: true` on the `x86_64` source only.
 
@@ -89,26 +91,28 @@ Icon installation derives the size from filenames shaped as `<app-id>-<size>.png
 Adding a new application **does not require editing any GitHub Actions workflows** (`.github/workflows/`). To add an app:
 
 1. Create a package directory under `manifests/` named with the reverse-DNS Flatpak app ID: `manifests/<app-id>/`.
-2. Create the Flatpak manifest `manifests/<app-id>/<app-id>.yml` (or `.yaml`) specifying matching `app-id: <app-id>` and two architecture-specific `extra-data` sources with `x-checker-data`.
-3. Add the desktop entry `manifests/<app-id>/<app-id>.desktop`, AppStream metadata `manifests/<app-id>/<app-id>.metainfo.xml`, shell launcher `manifests/<app-id>/<name>.sh`, and icons under `manifests/<app-id>/icons/<app-id>-<size>.png`.
-4. Validate discovery and manifest build locally:
+2. Add `manifests/<app-id>/architectures` with `x86_64`, `aarch64`, or both, one per line.
+3. Create the Flatpak manifest `manifests/<app-id>/<app-id>.yml` (or `.yaml`) specifying matching `app-id: <app-id>` and architecture-specific `extra-data` sources with `x-checker-data`.
+4. Add the desktop entry `manifests/<app-id>/<app-id>.desktop`, AppStream metadata `manifests/<app-id>/<app-id>.metainfo.xml`, shell launcher `manifests/<app-id>/<name>.sh`, and icons under `manifests/<app-id>/icons/<app-id>-<size>.png`.
+5. Validate discovery and manifest build locally:
    ```sh
    tools/discover-manifests.sh
-   flatpak-builder --force-clean --disable-rofiles-fuse build-<app-id> manifests/<app-id>/<app-id>.yml
+   tools/build-apps.sh <app-id>
    ```
-5. If the app is ready for users, add a row to the `Apps` table in `README.md`. The install command and the `aiextra.flatpakrepo` description are app-agnostic and must not be re-specialized to name individual apps.
+6. If the app is ready for users, add a row to the `Apps` table in `README.md`. The install command and the `aiextra.flatpakrepo` description are app-agnostic and must not be re-specialized to name individual apps.
 
 ## CI and publication flow
 
-`.github/workflows/build.yml` builds native `x86_64` and `aarch64` jobs serially. Both jobs update the same incremental OSTree repository on `gh-pages`, so preserving the existing `repo/` checkout and `max-parallel: 1` prevents one architecture from overwriting the other.
+`.github/workflows/build.yml` first resolves the target applications and takes the union of their `architectures` files, then runs only the required native `x86_64` and/or `aarch64` jobs. Architecture jobs run serially. They update the same incremental OSTree repository on `gh-pages`, so preserving the existing `repo/` checkout and `max-parallel: 1` prevents one architecture from overwriting the other.
 
 Within each architecture job, CI:
 
 1. Seeds `repo/` from the existing `gh-pages` branch.
 2. Imports the private GPG key and installs the runtime, SDK, and Electron BaseApp.
-3. Dynamically determines target applications (from dispatch inputs, or from `git diff` for changes isolated to `manifests/<app-id>/`, falling back to all apps if shared tooling/workflows changed) and builds them via `tools/build-apps.sh`.
-4. Signs updated repository metadata and publishes `repo/` back to `gh-pages` if at least one build succeeded.
-5. Fails the workflow job if any application build failed, surfacing the list of failed app IDs in `::error::`.
+3. Builds configured applications for the job's native architecture via `tools/build-apps.sh`, skipping applications that do not list it.
+4. After an application's configured build succeeds, removes that application's refs for architectures no longer configured.
+5. Signs updated repository metadata and publishes `repo/` back to `gh-pages` if at least one build succeeded.
+6. Fails the workflow job if any application build failed, surfacing the list of failed app IDs in `::error::`.
 
 The dynamic app build step uses `continue-on-error` and isolates individual build errors so that successful app updates can still be published while preserving previous versions of failed apps.
 

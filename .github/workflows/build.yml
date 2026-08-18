@@ -23,7 +23,29 @@ permissions:
   contents: write
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.build_plan.outputs.apps }}
+      matrix: ${{ steps.build_plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Resolve changed/requested applications first, then take the union of
+      # their per-app architecture configs. This prevents allocating a native
+      # runner for an architecture none of the target applications publish.
+      - name: Determine applications and architectures to build
+        id: build_plan
+        env:
+          INPUT_APPS: ${{ inputs.apps }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: bash tools/determine-target-apps.sh
+
   build:
+    needs: plan
     strategy:
       fail-fast: false
       # One arch at a time: each leg checks out the current gh-pages state,
@@ -32,12 +54,7 @@ jobs:
       # against the same branch, and the second to land would overwrite the
       # first's freshly-added ref with a stale gh-pages checkout.
       max-parallel: 1
-      matrix:
-        include:
-          - arch: x86_64
-            runner: ubuntu-latest
-          - arch: aarch64
-            runner: ubuntu-24.04-arm
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -103,18 +120,6 @@ jobs:
             org.freedesktop.Sdk//25.08 \
             org.electronjs.Electron2.BaseApp//25.08
 
-      # Determine which applications to build.
-      # If specific apps were requested via workflow_dispatch or update-check, build only those.
-      # On git push, inspect git diff: if changes are isolated to specific manifests/<app-id>/,
-      # build only those apps; if shared tooling/workflows changed, build all apps.
-      - name: Determine applications to build
-        id: target_apps
-        env:
-          INPUT_APPS: ${{ inputs.apps }}
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
-        run: bash tools/determine-target-apps.sh
-
       # extra-data sources are not fetched by flatpak-builder (only recorded
       # as {url, sha256, size} metadata for the end user's `flatpak install`
       # to resolve later), so these builds never download the actual
@@ -126,7 +131,9 @@ jobs:
       - name: Build Flatpak applications
         id: build_apps
         continue-on-error: true
-        run: bash tools/build-apps.sh ${{ steps.target_apps.outputs.apps }}
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: bash tools/build-apps.sh ${{ needs.plan.outputs.apps }}
 
       # An empty success_count means build-apps.sh died before reporting, so
       # there is nothing to sign or publish.
