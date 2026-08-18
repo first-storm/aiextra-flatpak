@@ -1,9 +1,9 @@
 app-id: com.anthropic.Claude
 runtime: org.freedesktop.Platform
-runtime-version: "25.08"
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
-base-version: "25.08"
+base-version: '25.08'
 command: com.anthropic.Claude
 separate-locales: false
 tags:
@@ -53,9 +53,9 @@ modules:
       - type: extra-data
         filename: claude-desktop.deb
         only-arches: [x86_64]
-        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_amd64.deb
-        sha256: 09e41a20a5b47ea0e5bc226d4fffa77af43ad450c7cbf5e66e56d6e4fd4ad2e9
-        size: 172617692
+        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.5_amd64.deb
+        sha256: e699763dd0e33bd831a1c771ea2684ead894f2680f02c71693a4e345046bd8f5
+        size: 172579328
         x-checker-data:
           type: debian-repo
           package-name: claude-desktop
@@ -66,9 +66,9 @@ modules:
       - type: extra-data
         filename: claude-desktop.deb
         only-arches: [aarch64]
-        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.1_arm64.deb
-        sha256: 16949f5c06387806bd01eb1b2b402af8ed515d37e4ffc6f2d6aae5808af873c8
-        size: 164573252
+        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.5_arm64.deb
+        sha256: 9de0fbb5300d80bbf91dc7e4a4d066bfd6bead3830a0d7ae6c8b0a8529cf59ea
+        size: 164660336
         x-checker-data:
           type: debian-repo
           package-name: claude-desktop
