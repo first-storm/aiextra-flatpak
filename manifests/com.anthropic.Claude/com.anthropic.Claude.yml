@@ -53,9 +53,9 @@ modules:
       - type: extra-data
         filename: claude-desktop.deb
         only-arches: [x86_64]
-        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.5_amd64.deb
-        sha256: e699763dd0e33bd831a1c771ea2684ead894f2680f02c71693a4e345046bd8f5
-        size: 172579328
+        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.32352.1_amd64.deb
+        sha256: 9d00c4ea86d037061e1ca1f1709f930ec4a4d7737d87b2f68b87bc3e87e38186
+        size: 171870372
         x-checker-data:
           type: debian-repo
           package-name: claude-desktop
@@ -66,9 +66,9 @@ modules:
       - type: extra-data
         filename: claude-desktop.deb
         only-arches: [aarch64]
-        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.30096.5_arm64.deb
-        sha256: 9de0fbb5300d80bbf91dc7e4a4d066bfd6bead3830a0d7ae6c8b0a8529cf59ea
-        size: 164660336
+        url: https://downloads.claude.ai/claude-desktop/apt/stable/pool/main/c/claude-desktop/claude-desktop_1.32352.1_arm64.deb
+        sha256: aa45e5f784000bc2995c6ae511a89ad3b7d9e0d63baeda2563faecd5a8850906
+        size: 164271352
         x-checker-data:
           type: debian-repo
           package-name: claude-desktop
