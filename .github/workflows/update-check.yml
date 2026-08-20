@@ -21,39 +21,37 @@ jobs:
         with:
           ref: main
 
+      - name: Install manifest parser
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+
       # flatpak-external-data-checker resolves each manifest's x-checker-data
       # and rewrites the extra-data url/sha256/size in place when a newer
-      # version is published.
-      #
-      # Dynamically discovers all application manifests and checks each of them.
-      # --commit-to-current-branch commits straight onto the checked out main
-      # rather than cutting an update-* branch and opening a PR.
+      # version is published. --commit-to-current-branch commits straight onto
+      # the checked out main rather than cutting an update-* branch.
       - name: Run flatpak-external-data-checker on all manifests
         id: checker
         continue-on-error: true
-        run: bash tools/check-updates.sh
+        run: tools/aiextra.py check --all
 
-      # Runs even when a checker failed (continue-on-error above), so an update
-      # an earlier checker already committed still ships; the final step keeps
-      # the run red.
+      # `updated` is the checker's own per-application result, so there is no
+      # second, independently-derived answer to "did anything change" that
+      # could disagree with it. An empty list means nothing to do -- never
+      # "rebuild everything".
       - name: Push updates and rebuild
+        if: steps.checker.outputs.updated != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "$(git rev-parse HEAD)" = "$(git rev-parse @{u})" ]; then
-            echo "No updates found."
-            exit 0
-          fi
           git push origin main
           # Pushes authenticated with GITHUB_TOKEN don't trigger other
           # workflows, so build.yml has to be dispatched explicitly.
-          gh workflow run build.yml --ref main -f apps="${{ steps.checker.outputs.updated_apps }}"
+          gh workflow run build.yml --ref main -f apps="${{ steps.checker.outputs.updated }}"
 
-      # Ensure the workflow run is marked red if any application checker failed,
-      # after any successful updates have already been pushed. An empty
-      # failure_count (script died early) also trips this.
+      # Ensure the workflow run is marked red if any application checker
+      # failed, after any successful updates have already been pushed. An
+      # empty failed_count (the tool died early) also trips this.
       - name: Fail workflow if any checker failed
-        if: steps.checker.outputs.failure_count != '0'
+        if: steps.checker.outputs.failed_count != '0'
         run: |
-          echo "::error::External data checker failed for: ${{ steps.checker.outputs.failed_apps }}"
+          echo "::error::External data checker failed for: ${{ steps.checker.outputs.failed }}"
           exit 1

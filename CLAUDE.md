@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-This repository packages unofficial Flatpak wrappers for upstream-published Linux releases of AI desktop applications (currently ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, and ZCode `ai.z.ZCode`; more may be added, and they are not necessarily closed-source). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
+This repository packages unofficial Flatpak wrappers for upstream-published Linux releases of AI desktop applications (currently ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, ZCode `ai.z.ZCode`, and LobeHub Desktop `com.lobehub.lobehub-desktop`; more may be added, and they are not necessarily closed-source). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
 
 User-facing descriptions — `README.md`'s intro and `aiextra.flatpakrepo`'s `Comment`/`Description` — are deliberately app-agnostic so that adding an application does not require rewriting them. Keep them that way: the packaged apps are enumerated only in the README's `Apps` table.
 
@@ -22,22 +22,34 @@ flatpak install -y flathub \
   org.electronjs.Electron2.BaseApp//25.08
 ```
 
-Discover all application manifests in the repository (or pass optional app IDs / manifest paths to filter):
+All build-system operations go through one entry point, `tools/aiextra.py`. It
+needs Python 3 and PyYAML (`python3-yaml` on Debian/Ubuntu).
+
+Target selection is always one explicit mode — `--all`, `--since <rev>`, or
+named app IDs — and never an empty string. Nothing can silently turn "no
+targets" into "every target".
 
 ```sh
-tools/discover-manifests.sh
-tools/discover-manifests.sh com.openai.ChatGPT
+tools/aiextra.py apps  --all                    # resolve + validate every app
+tools/aiextra.py apps  com.openai.ChatGPT       # ...or just some
+tools/aiextra.py plan  --all                    # JSON: apps, arches, matrix, runtimes
+tools/aiextra.py plan  --since HEAD~1           # apps changed since a revision
 ```
 
-Build applications into a shared repository (builds all discovered manifests, or pass specific app IDs; requires `GPG_KEY_ID` and `GNUPGHOME` for signing in CI, or omit them for unsigned local builds):
+Build applications into a shared OSTree repo (`GPG_KEY_ID` + `GNUPGHOME` add
+signing; omit both for unsigned local builds — a lone one is ignored):
 
 ```sh
-tools/build-apps.sh
-tools/build-apps.sh com.openai.ChatGPT
+tools/aiextra.py build --all
+tools/aiextra.py build com.openai.ChatGPT
+tools/aiextra.py prune --all       # drop refs for architectures no longer configured
 
 flatpak build-update-repo \
   --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
 ```
+
+Exit codes are distinct: `0` success, `1` an operation failed (some app failed
+to build or check), `2` a usage or validation error.
 
 For targeted validation of a single application without publishing/signing:
 
@@ -45,14 +57,40 @@ For targeted validation of a single application without publishing/signing:
 flatpak-builder --force-clean --disable-rofiles-fuse build-com.openai.ChatGPT manifests/com.openai.ChatGPT/com.openai.ChatGPT.yml
 ```
 
-There is no test suite, linter, formatter, or static-check configuration. Building one app is the targeted validation equivalent; there is no single-test command. Generated state is ignored under `.flatpak-builder/`, `build-*`, `repo/`, and `*.flatpak`.
+The build system has a test suite under `tests/`, run with the stdlib test
+runner (no third-party dependency):
+
+```sh
+python3 -m unittest discover -s tests -t tests          # everything
+python3 -m unittest discover -s tests -t tests -k prune # one area
+python3 -m unittest -t tests tests.test_build           # one file
+```
+
+Every test drives `tools/aiextra.py` as a subprocess against a throwaway
+fixture repository (`AIEXTRA_REPO_ROOT`) with stubbed `flatpak`,
+`flatpak-builder`, `ostree` and checker binaries on `PATH`. **The seam under
+test is the command-line contract only** — argv in; stdout JSON, stderr, exit
+code, `$GITHUB_OUTPUT` and the argv recorded by the stubs out. Nothing reaches
+inside the module, so its internals stay free to change. Add tests at that
+boundary; do not import functions from `tools/aiextra.py`.
+
+`tests/test_build.py` pins the exact `flatpak-builder` argv on purpose: the
+published OSTree refs that installed clients already track depend on it.
+
+There is no linter or formatter configuration. Building one app remains the
+targeted end-to-end validation. Generated state is ignored under
+`.flatpak-builder/`, `build-*`, `repo/`, and `*.flatpak`.
 
 The automated upstream update check across all discovered manifests (or for specific apps) is run by:
 
 ```sh
-tools/check-updates.sh
-tools/check-updates.sh com.openai.ChatGPT
+tools/aiextra.py check --all
+tools/aiextra.py check com.openai.ChatGPT
 ```
+
+`check` refuses to start when the working tree is dirty. It rolls a failed
+checker back with `git reset --hard`, so this guard is what keeps that from
+destroying uncommitted local work.
 
 Or for a single manifest directly:
 
@@ -96,8 +134,8 @@ Adding a new application **does not require editing any GitHub Actions workflows
 4. Add the desktop entry `manifests/<app-id>/<app-id>.desktop`, AppStream metadata `manifests/<app-id>/<app-id>.metainfo.xml`, shell launcher `manifests/<app-id>/<name>.sh`, and icons under `manifests/<app-id>/icons/<app-id>-<size>.png`.
 5. Validate discovery and manifest build locally:
    ```sh
-   tools/discover-manifests.sh
-   tools/build-apps.sh <app-id>
+   tools/aiextra.py plan --all
+   tools/aiextra.py build <app-id>
    ```
 6. If the app is ready for users, add a row to the `Apps` table in `README.md`. The install command and the `aiextra.flatpakrepo` description are app-agnostic and must not be re-specialized to name individual apps.
 
@@ -109,8 +147,8 @@ Within each architecture job, CI:
 
 1. Seeds `repo/` from the existing `gh-pages` branch.
 2. Imports the private GPG key and installs the runtime, SDK, and Electron BaseApp.
-3. Builds configured applications for the job's native architecture via `tools/build-apps.sh`, skipping applications that do not list it.
-4. After an application's configured build succeeds, removes that application's refs for architectures no longer configured.
+3. Builds configured applications for the job's native architecture via `tools/aiextra.py build`, skipping applications that do not list it.
+4. Runs `tools/aiextra.py prune --all` as separate repository maintenance, removing `app/`, `.Debug` and `.Locale` refs for architectures an application no longer configures. It covers every application, not only the ones built in this run, and its failures are reported separately from build failures.
 5. Signs updated repository metadata and publishes `repo/` back to `gh-pages` if at least one build succeeded.
 6. Fails the workflow job if any application build failed, surfacing the list of failed app IDs in `::error::`.
 
@@ -118,4 +156,8 @@ The dynamic app build step uses `continue-on-error` and isolates individual buil
 
 `aiextra.flatpakrepo` embeds the public key corresponding to CI's `GPG_PRIVATE_KEY`; keep them synchronized during key rotation.
 
-The build workflow's path filter ignores documentation and update-check workflow changes (`paths-ignore`), triggering on any push to `main` that touches application manifests, assets, tools, or repo metadata.
+The build workflow's path filter ignores documentation, tests, and the CI/update-check workflows (`paths-ignore`), triggering on any push to `main` that touches application manifests, assets, tools, or repo metadata.
+
+`.github/workflows/ci.yml` runs the `tests/` suite and `tools/aiextra.py plan --all` on every push and pull request.
+
+The runtime, SDK and BaseApp refs CI installs are derived from the manifests by `tools/aiextra.py plan` (its `runtimes` output), so bumping a manifest's `runtime-version` needs no workflow edit.
