@@ -22,6 +22,7 @@ launcher.
 | --- | --- |
 | ChatGPT Desktop | `com.openai.ChatGPT` |
 | Claude Desktop | `com.anthropic.Claude` |
+| LobeHub Desktop | `com.lobehub.lobehub-desktop` |
 | [ZCode](docs/zcode-host-command-hooks.md) | `ai.z.ZCode` |
 
 ## Install
@@ -32,8 +33,9 @@ flatpak install aiextra <app-id>
 ```
 
 Pick an ID from the table above; `flatpak install` also takes several at once.
-Published builds cover both x86_64 and aarch64, and it picks the ref matching
-your machine automatically.
+Each app can publish x86_64, aarch64, or both; Flatpak picks the available ref
+matching your machine automatically. Maintainers configure this per app in
+`manifests/<app-id>/architectures`, with one Flatpak architecture name per line.
 
 ## Signing
 
