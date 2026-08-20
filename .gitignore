@@ -2,3 +2,4 @@
 build-*/
 repo/
 *.flatpak
+__pycache__/

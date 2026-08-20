@@ -6,6 +6,9 @@ on:
     paths-ignore:
       - "README.md"
       - "CLAUDE.md"
+      - "docs/**"
+      - "tests/**"
+      - ".github/workflows/ci.yml"
       - ".github/workflows/update-check.yml"
   workflow_dispatch:
     inputs:
@@ -28,24 +31,40 @@ jobs:
     outputs:
       apps: ${{ steps.build_plan.outputs.apps }}
       matrix: ${{ steps.build_plan.outputs.matrix }}
+      runtimes: ${{ steps.build_plan.outputs.runtimes }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Resolve changed/requested applications first, then take the union of
-      # their per-app architecture configs. This prevents allocating a native
-      # runner for an architecture none of the target applications publish.
-      - name: Determine applications and architectures to build
+      - name: Install manifest parser
+        run: sudo apt-get update && sudo apt-get install -y python3-yaml
+
+      # `aiextra plan` resolves the target applications, then derives the
+      # architecture matrix and the runtime list from those applications'
+      # own configuration. Target selection is always one explicit mode, so
+      # "nothing changed" can never be mistaken for "rebuild everything".
+      - name: Determine applications, architectures and runtimes to build
         id: build_plan
         env:
+          # Via env, never interpolated into the script: `apps` is
+          # caller-supplied input.
           INPUT_APPS: ${{ inputs.apps }}
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
-        run: bash tools/determine-target-apps.sh
+        run: |
+          if [ -n "$INPUT_APPS" ]; then
+            set -- "$INPUT_APPS"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            set -- --since "$BEFORE_SHA"
+          else
+            set -- --all
+          fi
+          tools/aiextra.py plan "$@"
 
   build:
     needs: plan
+    if: needs.plan.outputs.apps != ''
     strategy:
       fail-fast: false
       # One arch at a time: each leg checks out the current gh-pages state,
@@ -79,10 +98,10 @@ jobs:
           mkdir -p repo
           rm -rf repo/.git
 
-      - name: Install flatpak and flatpak-builder
+      - name: Install flatpak, flatpak-builder and the manifest parser
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder gnupg
+          sudo apt-get install -y flatpak flatpak-builder gnupg python3-yaml
 
       # Signs new OSTree commits/summary so `flatpak remote-add` with the
       # published GPGKey (see aiextra.flatpakrepo) can verify them. The
@@ -109,42 +128,49 @@ jobs:
       - name: Add Flathub remote
         run: sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
+      # The exact refs come from the manifests themselves via `aiextra plan`,
+      # so bumping a manifest's runtime-version needs no workflow edit.
       # Each matrix leg runs on a runner whose CPU already matches
-      # matrix.arch, so this installs (and flatpak-builder later builds) the
-      # runtime/SDK/BaseApp for that arch natively, with no --arch flag or
-      # cross/QEMU setup needed.
+      # matrix.arch, so this installs (and flatpak-builder later builds)
+      # natively, with no --arch flag or cross/QEMU setup needed.
       - name: Install runtime, SDK and Electron base app
-        run: |
-          sudo flatpak install -y flathub \
-            org.freedesktop.Platform//25.08 \
-            org.freedesktop.Sdk//25.08 \
-            org.electronjs.Electron2.BaseApp//25.08
+        run: sudo flatpak install -y flathub ${{ needs.plan.outputs.runtimes }}
 
       # extra-data sources are not fetched by flatpak-builder (only recorded
       # as {url, sha256, size} metadata for the end user's `flatpak install`
       # to resolve later), so these builds never download the actual
       # multi-hundred-MB vendor binaries.
       #
-      # Builds specified or discovered Flatpak manifests.
       # Each build is independent: one app failing to build must not block
       # other apps' updates from being published.
       - name: Build Flatpak applications
         id: build_apps
         continue-on-error: true
-        env:
-          TARGET_ARCH: ${{ matrix.arch }}
-        run: bash tools/build-apps.sh ${{ needs.plan.outputs.apps }}
+        run: tools/aiextra.py build --arch ${{ matrix.arch }} ${{ needs.plan.outputs.apps }}
 
-      # An empty success_count means build-apps.sh died before reporting, so
-      # there is nothing to sign or publish.
+      # Repository maintenance, not part of any one app's build: drop refs
+      # for architectures an application no longer configures. Runs over
+      # every application so an app that dropped an arch is cleaned up even
+      # when it is not in this run's build set.
+      - name: Drop refs for unconfigured architectures
+        continue-on-error: true
+        run: tools/aiextra.py prune --all
+
+      # One place decides whether this leg produced anything worth shipping.
+      # An empty succeeded_count means the build step died before reporting.
+      - name: Decide whether there is anything to publish
+        id: publishable
+        run: |
+          echo "yes=${{ steps.build_apps.outputs.succeeded_count != '' && steps.build_apps.outputs.succeeded_count != '0' }}" >> "$GITHUB_OUTPUT"
+
       - name: Sign repo metadata and assemble Pages site
-        if: steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
+        if: steps.publishable.outputs.yes == 'true'
         run: |
           flatpak build-update-repo --gpg-sign="$GPG_KEY_ID" --gpg-homedir="$GNUPGHOME" repo
           cp aiextra.flatpakrepo README.md .nojekyll repo/
 
       - name: Publish to GitHub Pages
-        if: steps.build_apps.outputs.success_count != '' && steps.build_apps.outputs.success_count != '0'
+        if: steps.publishable.outputs.yes == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -155,9 +181,9 @@ jobs:
       # result, so surface it explicitly here: the workflow run should
       # still show red (and notify) if any app failed, even though the
       # other apps' updates were published successfully. An empty
-      # failure_count (script died early) also trips this.
+      # failed_count (the tool died early) also trips this.
       - name: Fail the workflow if any app failed to build
-        if: steps.build_apps.outputs.failure_count != '0'
+        if: steps.build_apps.outputs.failed_count != '0'
         run: |
-          echo "::error::[${{ matrix.arch }}] Flatpak builds failed for: ${{ steps.build_apps.outputs.failed_apps }}"
+          echo "::error::[${{ matrix.arch }}] Flatpak builds failed for: ${{ steps.build_apps.outputs.failed }}"
           exit 1
