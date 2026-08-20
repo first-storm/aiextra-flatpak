@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.lobehub.lobehub-desktop</id>
+  <name>LobeHub</name>
+  <summary>Chief Agent Operator and AI agent workspace</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="com.lobehub">
+    <name>LobeHub</name>
+  </developer>
+  <description>
+    <p>
+      LobeHub is an open-source AI Agent framework and desktop client supporting
+      speech synthesis, multimodal reasoning, extensible plugins, MCP (Model Context Protocol),
+      and heterogeneous CLI coding agents.
+    </p>
+    <p>
+      This Flatpak wraps the official Linux desktop build. The application package is
+      downloaded directly from LobeHub's GitHub release distribution at install time.
+    </p>
+  </description>
+  <launchable type="desktop-id">com.lobehub.lobehub-desktop.desktop</launchable>
+  <url type="homepage">https://lobehub.com</url>
+  <url type="bugtracker">https://github.com/lobehub/lobehub/issues</url>
+  <url type="help">https://lobehub.com/docs</url>
+  <categories>
+    <category>Utility</category>
+    <category>Network</category>
+    <category>Chat</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="2.2.14" date="2026-08-16"/>
+  </releases>
+</component>

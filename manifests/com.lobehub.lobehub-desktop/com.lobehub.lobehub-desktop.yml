@@ -1,0 +1,91 @@
+app-id: com.lobehub.lobehub-desktop
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+command: com.lobehub.lobehub-desktop
+separate-locales: false
+tags:
+  - proprietary
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.kde.kwalletd6
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+
+modules:
+  - name: lobehub-desktop
+    buildsystem: simple
+    build-options:
+      no-debuginfo: true
+      strip: false
+    build-commands:
+      - install -Dm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
+      - install -Dm755 lobehub-desktop.sh ${FLATPAK_DEST}/bin/${FLATPAK_ID}
+      - install -Dm644 com.lobehub.lobehub-desktop.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 com.lobehub.lobehub-desktop.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - |
+        set -e
+        for f in icons/*.png; do
+          size=${f##*-}
+          size=${size%.png}
+          install -Dm644 "$f" \
+            ${FLATPAK_DEST}/share/icons/hicolor/${size}x${size}/apps/${FLATPAK_ID}.png
+        done
+    sources:
+      # amd64 build of LobeHub Desktop, fetched by the end user's
+      # `flatpak install` (not by flatpak-builder) straight from GitHub releases
+      # and verified against the sha256 below.
+      - type: extra-data
+        filename: lobehub-desktop.deb
+        only-arches: [x86_64]
+        url: https://github.com/lobehub/lobehub/releases/download/v2.2.14/lobehub-desktop_2.2.14_amd64.deb
+        sha256: 5e9283f4c4d7b289a3056d96c6b983785752577347ce56f04ed37a0c13a253ee
+        size: 120410884
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/lobehub/lobehub/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          url-query: >-
+            .assets[]
+            | select(.name | test("^lobehub-desktop_.*_amd64\\.deb$"))
+            | .browser_download_url
+          timestamp-query: .published_at
+          is-main-source: true
+      - type: file
+        path: lobehub-desktop.sh
+      - type: file
+        path: com.lobehub.lobehub-desktop.desktop
+      - type: file
+        path: com.lobehub.lobehub-desktop.metainfo.xml
+      - type: dir
+        path: icons
+        dest: icons
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          # The .deb is an ar archive containing a data.tar.{xz,zst,...}. LobeHub
+          # installs under /opt, so the app lives at opt/LobeHub/ inside it — hence
+          # strip depth 3, which flattens ./opt/LobeHub into the current directory
+          # (/app/extra).
+          - bsdtar -Oxf lobehub-desktop.deb 'data.tar*' | bsdtar -xf - --strip-components=3
+            ./opt/LobeHub
+          - rm lobehub-desktop.deb
+          # Make Electron report our Flatpak app ID as its Wayland app_id /
+          # X11 WM_CLASS so window/taskbar/icon association works. Upstream
+          # ships StartupWMClass=LobeHub, which would not match otherwise.
+          - patch-electron-desktop-filename --desktop-filename com.lobehub.lobehub-desktop
+            --skip-integrity-check resources/app.asar

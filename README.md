@@ -22,6 +22,7 @@ launcher.
 | --- | --- |
 | ChatGPT Desktop | `com.openai.ChatGPT` |
 | Claude Desktop | `com.anthropic.Claude` |
+| LobeHub Desktop | `com.lobehub.lobehub-desktop` |
 | [ZCode](docs/zcode-host-command-hooks.md) | `ai.z.ZCode` |
 
 ## Install

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=LobeHub
+Comment=LobeHub Desktop Application
+GenericName=AI Agent Operator & Chat Client
+Keywords=AI;Agent;Chat;LLM;LobeHub;LobeChat;OpenAI;Claude;DeepSeek;
+Exec=com.lobehub.lobehub-desktop %U
+Icon=com.lobehub.lobehub-desktop
+Terminal=false
+Type=Application
+StartupNotify=true
+StartupWMClass=com.lobehub.lobehub-desktop
+Categories=Utility;Network;Chat;
+MimeType=x-scheme-handler/lobehub;
