@@ -52,9 +52,9 @@ modules:
       - type: extra-data
         filename: lobehub-desktop.deb
         only-arches: [x86_64]
-        url: https://github.com/lobehub/lobehub/releases/download/v2.2.15/lobehub-desktop_2.2.15_amd64.deb
-        sha256: e707670457edc1071044d2177bd8afdb6e62b4901f862d71a8b638423b62642f
-        size: 121067884
+        url: https://github.com/lobehub/lobehub/releases/download/v2.2.16/lobehub-desktop_2.2.16_amd64.deb
+        sha256: 419ac5c5facbe02b93eb58d777abfc88642c4a9e2fecac12514f83942122786d
+        size: 123748952
         x-checker-data:
           type: json
           url: https://api.github.com/repos/lobehub/lobehub/releases/latest
