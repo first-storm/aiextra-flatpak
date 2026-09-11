@@ -25,8 +25,11 @@
   </categories>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="26.908.40401" date="2026-09-11">
+    <release version="26.908.40834" date="2026-09-11">
       <description></description>
+    </release>
+    <release version="26.908.40401" date="2026-09-11">
+      <description/>
     </release>
     <release version="26.908.31748" date="2026-09-11">
       <description/>
