@@ -438,6 +438,10 @@ def checker_command(root: Path) -> list[str]:
         return ["flatpak-external-data-checker"]
     name = os.environ.get("GIT_AUTHOR_NAME", "flatpak-external-data-checker")
     email = os.environ.get("GIT_AUTHOR_EMAIL", DEFAULT_GIT_IDENTITY)
+    # Forwarded so the checker authenticates its api.github.com lookups
+    # (e.g. the json checker's GitHub releases queries) instead of hitting
+    # the shared, easily-exhausted 60/hour anonymous rate limit.
+    github_token = os.environ.get("GITHUB_TOKEN", "")
     return [
         "docker",
         "run",
@@ -454,6 +458,8 @@ def checker_command(root: Path) -> list[str]:
         f"GIT_AUTHOR_EMAIL={email}",
         "-e",
         f"GIT_COMMITTER_EMAIL={email}",
+        "-e",
+        f"GITHUB_TOKEN={github_token}",
         "ghcr.io/flathub/flatpak-external-data-checker:latest",
     ]
 
