@@ -31,6 +31,12 @@ jobs:
       - name: Run flatpak-external-data-checker on all manifests
         id: checker
         continue-on-error: true
+        env:
+          # Authenticates the checker's api.github.com lookups (e.g. the
+          # json checker for com.lobehub.lobehub-desktop) so they use the
+          # 5,000/hour authenticated limit instead of the 60/hour
+          # anonymous one, which shared runner IPs exhaust easily.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: tools/aiextra.py check --all
 
       # `updated` is the checker's own per-application result, so there is no
