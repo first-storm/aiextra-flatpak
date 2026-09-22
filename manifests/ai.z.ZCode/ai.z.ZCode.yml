@@ -85,9 +85,9 @@ modules:
       - type: extra-data
         filename: zcode.deb
         only-arches: [x86_64]
-        url: https://cdn-zcode.z.ai/zcode/electron/releases/3.14.0/linux-x64/ZCode-3.14.0-linux-x64.deb
-        sha256: ad1c7f76d40967de74d6a8738bb7a941ed350b78c4339daecff1c9942112842a
-        size: 162038244
+        url: https://cdn-zcode.z.ai/zcode/electron/releases/3.14.3/linux-x64/ZCode-3.14.3-linux-x64.deb
+        sha256: 8512fb78889686c7ecdc91a609a86e6b408255a10db0c9afba0d3e377b0b5b4f
+        size: 162062180
         x-checker-data:
           type: json
           url: https://zcode.z.ai/api/v1/releases/latest
@@ -100,9 +100,9 @@ modules:
       - type: extra-data
         filename: zcode.deb
         only-arches: [aarch64]
-        url: https://cdn-zcode.z.ai/zcode/electron/releases/3.14.0/linux-arm64/ZCode-3.14.0-linux-arm64.deb
-        sha256: a98f767484dbd0128dc1ce5d8fa9cd6e1db9a3c3f8b626aa9714872af816124d
-        size: 155195692
+        url: https://cdn-zcode.z.ai/zcode/electron/releases/3.14.3/linux-arm64/ZCode-3.14.3-linux-arm64.deb
+        sha256: 18263ced23563fd4c9afcaa6971da9541126d53c81f91f0bb28c938bd9efd477
+        size: 155214960
         x-checker-data:
           type: json
           url: https://zcode.z.ai/api/v1/releases/latest
