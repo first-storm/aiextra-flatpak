@@ -17,9 +17,9 @@ Install the build dependencies and the runtime used by manifests:
 ```sh
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install -y flathub \
-  org.freedesktop.Platform//25.08 \
-  org.freedesktop.Sdk//25.08 \
-  org.electronjs.Electron2.BaseApp//25.08
+  org.freedesktop.Platform//26.08 \
+  org.freedesktop.Sdk//26.08 \
+  org.electronjs.Electron2.BaseApp//26.08
 ```
 
 All build-system operations go through one entry point, `tools/aiextra.py`. It
