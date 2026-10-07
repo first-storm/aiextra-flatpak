@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository purpose
 
-This repository packages unofficial Flatpak wrappers for upstream-published Linux releases of AI desktop applications (currently ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, ZCode `ai.z.ZCode`, and LobeHub Desktop `com.lobehub.lobehub-desktop`; more may be added, and they are not necessarily closed-source). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
+This repository packages unofficial Flatpak wrappers for upstream-published Linux releases of AI desktop applications (currently ChatGPT `com.openai.ChatGPT`, Claude `com.anthropic.Claude`, and ZCode `ai.z.ZCode`; more may be added, and they are not necessarily closed-source). All application package units reside in `manifests/<app-id>/`. The repository does not build any of those applications from source and must not vendor their `.deb` packages. The manifests declare those packages as architecture-specific `extra-data`; Flatpak downloads them from the vendors and verifies their size and SHA256 during end-user installation.
 
 User-facing descriptions — `README.md`'s intro and `aiextra.flatpakrepo`'s `Comment`/`Description` — are deliberately app-agnostic so that adding an application does not require rewriting them. Keep them that way: the packaged apps are enumerated only in the README's `Apps` table.
 
