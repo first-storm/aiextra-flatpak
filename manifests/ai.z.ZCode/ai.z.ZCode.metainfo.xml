@@ -30,8 +30,11 @@
   </categories>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="3.16.2" date="2026-10-20">
+    <release version="3.16.3" date="2026-10-23">
       <description></description>
+    </release>
+    <release version="3.16.2" date="2026-10-20">
+      <description/>
     </release>
     <release version="3.15.3" date="2026-10-13">
       <description/>
